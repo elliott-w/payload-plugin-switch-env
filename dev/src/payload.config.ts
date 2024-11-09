@@ -1,13 +1,18 @@
-import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { type Args, mongooseAdapter } from '@payloadcms/db-mongodb'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import { testEmailAdapter } from './emailAdapter'
-import { myPlugin } from 'payload-plugin-template'
+import { switchEnvPlugin } from '@elliott-w/payload-plugin-switch-env'
+import { s3Storage } from '@payloadcms/storage-s3'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+
+const dbArgs: Args = {
+  url: process.env.PRODUCTION_MONGODB_URI || '',
+}
 
 export default buildConfig({
   admin: {
@@ -17,6 +22,7 @@ export default buildConfig({
     },
     user: 'users',
   },
+
   collections: [
     {
       slug: 'users',
@@ -33,10 +39,6 @@ export default buildConfig({
           name: 'title',
           type: 'text',
         },
-        {
-          name: 'content',
-          type: 'richText',
-        },
       ],
     },
     {
@@ -50,9 +52,7 @@ export default buildConfig({
       upload: true,
     },
   ],
-  db: mongooseAdapter({
-    url: process.env.DATABASE_URI || 'mongodb://127.0.0.1/plugin-development',
-  }),
+  db: mongooseAdapter(dbArgs),
   email: testEmailAdapter,
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || 'SOME_SECRET',
@@ -60,8 +60,29 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   plugins: [
-    myPlugin({
-      debug: true,
+    s3Storage({
+      bucket: process.env.S3_BUCKET!,
+      collections: {
+        media: true,
+      },
+      config: {
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+        },
+        region: process.env.S3_REGION,
+      },
+    }),
+    switchEnvPlugin({
+      quickSwitch: true,
+      db: {
+        function: mongooseAdapter,
+        productionArgs: dbArgs,
+        developmentArgs: {
+          ...dbArgs,
+          url: process.env.DEVELOPMENT_MONGODB_URI || '',
+        },
+      },
     }),
   ],
   async onInit(payload) {

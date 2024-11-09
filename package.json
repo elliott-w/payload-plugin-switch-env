@@ -1,9 +1,9 @@
 {
-  "name": "payload-plugin-template",
+  "name": "@elliott-w/payload-plugin-switch-env",
   "version": "3.0.0-beta.0",
-  "homepage:": "https://payloadcms.com",
-  "description": "Payload plugin template",
-  "author": "dev@payloadcms.com",
+  "homepage:": "https://github.com/elliott-w/payload-plugin-switch-env",
+  "description": "Payload plugin to switch environment",
+  "author": "Elliott Wagener",
   "license": "MIT",
   "files": [
     "dist",
@@ -26,24 +26,28 @@
     "prepublishOnly": "pnpm clean && pnpm build && pnpm copyfiles"
   },
   "peerDependencies": {
-    "next": "15.0.0-canary.173",
-    "payload": "^3.0.0-beta.111"
+    "next": "^15.0.3",
+    "payload": "beta",
+    "@payloadcms/db-mongodb": "beta",
+    "@payloadcms/ui": "beta",
+    "mongoose": "^6.12.3",
+    "bson": "^4.7.2"
   },
   "dependencies": {
-    "@payloadcms/ui": "3.0.0-beta.111",
-    "react": "19.0.0-rc-3edc000d-20240926",
-    "react-dom": "19.0.0-rc-3edc000d-20240926"
+    "@payloadcms/ui": "beta",
+    "react": "19.0.0-rc-65a56d0e-20241020",
+    "react-dom": "19.0.0-rc-65a56d0e-20241020"
   },
   "devDependencies": {
-    "@payloadcms/eslint-config": "3.0.0-beta.97",
+    "@payloadcms/eslint-config": "beta",
     "@types/node": "22.7.5",
     "@types/react": "npm:types-react@19.0.0-rc.1",
     "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
     "copyfiles": "^2.4.1",
-    "next": "15.0.0-canary.173",
-    "payload": "3.0.0-beta.111",
-    "react": "19.0.0-rc-3edc000d-20240926",
-    "react-dom": "19.0.0-rc-3edc000d-20240926",
+    "next": "15.0.3",
+    "payload": "beta",
+    "react": "19.0.0-rc-65a56d0e-20241020",
+    "react-dom": "19.0.0-rc-65a56d0e-20241020",
     "typescript": "5.5.3"
   },
   "pnpm": {

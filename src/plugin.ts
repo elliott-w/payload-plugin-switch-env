@@ -1,86 +1,59 @@
-import type { Config } from 'payload'
-
-import type { MyPluginOptions } from './types.js'
-
+import type { Config, Plugin } from 'payload'
+import type { SwitchEnvPluginArgs } from './types.js'
 import { onInitExtension } from './lib/onInitExtension.js'
+import { getEnv } from './lib/env.js'
+import { modifyUploadCollection } from './lib/modifyUploadCollection.js'
+import { switchEnvGlobal } from './lib/global.js'
 
-export const myPlugin =
-  (pluginOptions: MyPluginOptions) =>
-  (incomingConfig: Config): Config => {
-    const config = { ...incomingConfig }
+export function switchEnvPlugin<DBA>({
+  db,
+  quickSwitch = false,
+}: SwitchEnvPluginArgs<DBA>): Plugin {
+  return async (incomingConfig) => {
+    let config: Config = { ...incomingConfig }
+
+    const env = getEnv()
+    if (process.env.NODE_ENV === 'production' || env === 'production') {
+      config.db = db.function(db.productionArgs)
+    } else {
+      config.db = db.function(db.developmentArgs)
+    }
+    config.cookiePrefix = `payload-${env}`
 
     config.admin = {
       ...(config.admin || {}),
-
-      // Add additional admin config here
-
       components: {
         ...(config.admin?.components || {}),
-        // Add additional admin components here
-        afterDashboard: [
-          '/components/AfterDashboard/index.js#AfterDashboard',
-          '/components/AfterDashboardClient/index.js#AfterDashboardClient',
+        actions: [
+          ...(config.admin?.components?.actions || []),
+          {
+            serverProps: {
+              quickSwitch,
+            },
+            path: '@elliott-w/payload-plugin-switch-env#SwitchEnvButton',
+          },
         ],
       },
     }
 
-    /**
-     * If the plugin is disabled, return the config without modifying it
-     *
-     * Be cautious when using this if your plugin adds new collections or fields
-     * as this could cause issues w/ Postgres migrations
-     */
-    if (pluginOptions.enabled === false) {
-      return config
-    }
-
-    config.collections = (config.collections || []).map((collection) => {
-      const modifiedCollection = { ...collection }
-
-      // Make changes to the collection here
-
-      modifiedCollection.fields = (modifiedCollection.fields || []).map((field) => {
-        const newField = { ...field }
-
-        // Make changes to the fields here
-
-        return newField
-      })
-
-      return modifiedCollection
-    })
-
-    // Add additional collections here
-
-    config.endpoints = [
-      ...(config.endpoints || []),
-      {
-        handler: () => {
-          return Response.json({ message: 'Hello, world!' })
-        },
-        method: 'get',
-        path: '/custom-endpoint',
-      },
-      // Add additional endpoints here
-    ]
-
     config.globals = [
       ...(config.globals || []),
-      // Add additional globals here
+      switchEnvGlobal({
+        developmentDbaObj: db.function(db.developmentArgs),
+      }),
     ]
 
-    config.hooks = {
-      ...(config.hooks || {}),
-      // Add additional hooks here
-    }
-
-    config.onInit = async (payload) => {
-      if (incomingConfig.onInit) {
-        await incomingConfig.onInit(payload)
+    if (process.env.NODE_ENV === 'development' && env === 'development') {
+      config.collections = (config.collections || []).map(modifyUploadCollection)
+      const oldInit = config.onInit
+      config.onInit = async (payload) => {
+        await onInitExtension(payload)
+        if (oldInit) {
+          await oldInit(payload)
+        }
       }
-      // Add additional onInit code by using the onInitExtension function
-      onInitExtension(pluginOptions, payload)
     }
 
     return config
   }
+}

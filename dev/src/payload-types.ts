@@ -21,7 +21,9 @@ export interface Config {
   db: {
     defaultIDType: string;
   };
-  globals: {};
+  globals: {
+    'switch-env': SwitchEnv;
+  };
   locale: null;
   user: User & {
     collection: 'users';
@@ -69,21 +71,6 @@ export interface User {
 export interface Page {
   id: string;
   title?: string | null;
-  content?: {
-    root: {
-      type: string;
-      children: {
-        type: string;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -94,6 +81,7 @@ export interface Page {
 export interface Media {
   id: string;
   text?: string | null;
+  createdDuringDevelopment?: boolean | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -166,6 +154,15 @@ export interface PayloadMigration {
   batch?: number | null;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "switch-env".
+ */
+export interface SwitchEnv {
+  id: string;
+  updatedAt?: string | null;
+  createdAt?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

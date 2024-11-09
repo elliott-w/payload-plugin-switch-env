@@ -1,5 +1,5 @@
 {
-  "name": "payload-plugin-test-app",
+  "name": "@elliott-w/payload-plugin-switch-env-test-app",
   "description": "A test app for the plugin",
   "version": "0.0.1",
   "license": "MIT",
@@ -20,10 +20,11 @@
     "@payloadcms/db-postgres": "3.0.0-beta.111",
     "@payloadcms/next": "3.0.0-beta.111",
     "@payloadcms/richtext-lexical": "3.0.0-beta.111",
+    "@payloadcms/storage-s3": "3.0.0-beta.29",
     "@payloadcms/ui": "3.0.0-beta.111",
     "next": "15.0.0-canary.173",
     "payload": "3.0.0-beta.111",
-    "payload-plugin-template": "workspace:*",
+    "@elliott-w/payload-plugin-switch-env": "workspace:*",
     "react": "19.0.0-rc-3edc000d-20240926",
     "react-dom": "19.0.0-rc-3edc000d-20240926"
   },

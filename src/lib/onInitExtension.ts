@@ -1,11 +1,15 @@
 import type { Payload } from 'payload'
+import { existsSync, readFileSync, unlinkSync } from 'fs'
+import { backupFile } from './backupFile.js'
+import { restore } from './mongo.js'
+import type { MongooseAdapter } from '@payloadcms/db-mongodb'
 
-import type { MyPluginOptions } from '../types.js'
-
-export const onInitExtension = (pluginOptions: MyPluginOptions, payload: Payload): void => {
-  try {
-    payload.logger.info({ msg: 'Hello from onInitExtension' })
-  } catch (err: unknown) {
-    payload.logger.error({ err, msg: 'Error in onInitExtension' })
+export const onInitExtension = async (payload: Payload): Promise<void> => {
+  const logger = payload.logger
+  if (existsSync(backupFile)) {
+    logger.info('Restoring production database backup file')
+    const backupString = readFileSync(backupFile, 'utf8')
+    unlinkSync(backupFile)
+    await restore(payload.db.connection, backupString, logger)
   }
 }
