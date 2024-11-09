@@ -9,6 +9,11 @@ interface DatabaseAdapterArgs<T> {
 export interface SwitchEnvPluginArgs<DBA> {
   db: DatabaseAdapterArgs<DBA>
   /**
+   * Enable or disable the plugin
+   * @default true
+   */
+  enable?: boolean
+  /**
    * This will prevent the modal from appearing when clicking the switch button.
    * Instead the environment will be switched immediately. WARNING: If this is
    * set to true, switching from production to development will always copy the

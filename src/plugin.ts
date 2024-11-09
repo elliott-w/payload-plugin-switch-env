@@ -7,9 +7,14 @@ import { switchEnvGlobal } from './lib/global.js'
 
 export function switchEnvPlugin<DBA>({
   db,
+  enable = true,
   quickSwitch = false,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (incomingConfig) => {
+    if (!enable) {
+      return incomingConfig
+    }
+
     let config: Config = { ...incomingConfig }
 
     const env = getEnv()
