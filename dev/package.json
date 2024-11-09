@@ -16,17 +16,16 @@
     "generate:importmap": "payload generate:importmap"
   },
   "dependencies": {
-    "@payloadcms/db-mongodb": "3.0.0-beta.111",
-    "@payloadcms/db-postgres": "3.0.0-beta.111",
-    "@payloadcms/next": "3.0.0-beta.111",
-    "@payloadcms/richtext-lexical": "3.0.0-beta.111",
-    "@payloadcms/storage-s3": "3.0.0-beta.29",
-    "@payloadcms/ui": "3.0.0-beta.111",
-    "next": "15.0.0-canary.173",
-    "payload": "3.0.0-beta.111",
     "@elliott-w/payload-plugin-switch-env": "workspace:*",
-    "react": "19.0.0-rc-3edc000d-20240926",
-    "react-dom": "19.0.0-rc-3edc000d-20240926"
+    "@payloadcms/db-mongodb": "3.0.0-beta.126",
+    "@payloadcms/db-postgres": "3.0.0-beta.126",
+    "@payloadcms/next": "3.0.0-beta.126",
+    "@payloadcms/richtext-lexical": "3.0.0-beta.126",
+    "@payloadcms/ui": "3.0.0-beta.126",
+    "next": "15.0.3",
+    "payload": "3.0.0-beta.126",
+    "react": "19.0.0-rc-65a56d0e-20241020",
+    "react-dom": "19.0.0-rc-65a56d0e-20241020"
   },
   "devDependencies": {
     "copyfiles": "^2.4.1",
