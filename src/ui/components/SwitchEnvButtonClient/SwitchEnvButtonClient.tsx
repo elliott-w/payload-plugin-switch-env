@@ -4,7 +4,7 @@ import { type FC, useEffect, useRef, useState } from 'react'
 import { useMutation } from '../../hooks/useMutation'
 import { switchEnvGlobalSlug } from '../../../lib/slugs'
 import type { Env } from '../../../lib/env'
-import './SwitchEnvButton.scss'
+import './SwitchEnvButtonClient.scss'
 import { useRouter } from 'next/navigation'
 import {
   type SwitchEndpointInput,
@@ -19,7 +19,7 @@ export interface SwitchEnvButtonClientProps {
   quickSwitch: boolean
 }
 
-const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, quickSwitch }) => {
+export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, quickSwitch }) => {
   const {
     config: {
       serverURL,
@@ -146,5 +146,3 @@ const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, quickSwitc
     </div>
   )
 }
-
-export default SwitchEnvButtonClient

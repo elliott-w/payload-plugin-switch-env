@@ -1,5 +1,5 @@
 import { FC } from 'react'
-import SwitchEnvButtonClient from '../SwitchEnvButtonClient/SwitchEnvButton.client'
+import { SwitchEnvButtonClient } from '../SwitchEnvButtonClient/SwitchEnvButtonClient'
 import { getEnv } from '../../../lib/env'
 
 export type SwitchEnvButtonProps = {

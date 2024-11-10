@@ -32,10 +32,11 @@ export function switchEnvPlugin<DBA>({
         actions: [
           ...(config.admin?.components?.actions || []),
           {
-            serverProps: {
+            clientProps: () => ({
               quickSwitch,
-            },
-            path: '@elliott-w/payload-plugin-switch-env#SwitchEnvButton',
+              env: getEnv(),
+            }),
+            path: '@elliott-w/payload-plugin-switch-env#SwitchEnvButtonClient',
           },
         ],
       },
