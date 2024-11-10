@@ -1,4 +1,10 @@
-This plugin only works with payload 3.0.0-beta
+This plugin only works with:
+
+- payload 3.0.0-beta
+- mongodb
+- any cloud storage adapter (does not support local file storage)
+
+&nbsp;
 
 # Why this plugin?
 
