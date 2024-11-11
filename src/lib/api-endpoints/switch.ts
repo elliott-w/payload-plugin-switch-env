@@ -1,8 +1,10 @@
-import { DatabaseAdapterObj, Endpoint, PayloadRequest } from 'payload'
+import { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
 import { statSync, utimesSync, writeFileSync } from 'node:fs'
 import { getEnv, setEnv } from '../env'
-import { backup } from '../mongo'
-import { backupFile } from '../backupFile'
+import { backup } from '../db/mongo'
+import { backupFile } from '../db/backupFile'
+import { formatFileSize } from '../utils'
+import { type GetDatabaseAdapter } from '../db/getDbaFunction'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -14,10 +16,10 @@ export interface SwitchEndpointOutput {
 }
 
 export interface SwitchEndpointArgs {
-  payloadConfigPath: string
+  getDatabaseAdapter: GetDatabaseAdapter
 }
 
-export const switchEndpoint = ({ payloadConfigPath }: SwitchEndpointArgs): Endpoint => ({
+export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch',
   handler: async (req: PayloadRequest) => {
@@ -28,66 +30,46 @@ export const switchEndpoint = ({ payloadConfigPath }: SwitchEndpointArgs): Endpo
         message: 'This endpoint is only available in development mode',
       })
     }
-    if (getEnv() === 'production') {
-      setEnv('development')
+    const connection = req.payload.db.connection
+    const currentEnv = getEnv()
+    if (currentEnv === 'production') {
       if (req.json) {
         const body = (await req.json()) as SwitchEndpointInput
         if (body.copyDatabase) {
-          if ('connection' in req.payload.db) {
-            const connection = req.payload.db.connection
-            writeFileSync(backupFile, await backup(connection))
-            // Delete models so that when payload's onInit calls db.onInit() it does not cause
-            // Error: Cannot overwrite `users` model once compiled.
-            Object.keys(connection.models).forEach((modelName) => {
-              if (connection.models[modelName]) {
-                connection.deleteModel(modelName)
-              }
-            })
-
-            // Close the connection after cleaning up models
-            await connection.close()
-
-            // Log backup file
-            const stats = statSync(backupFile)
-            const formattedSize = formatFileSize(stats.size)
-            logger.info(`Created production database backup file (${formattedSize}):`)
-            logger.info(backupFile)
-          } else {
-            logger.warn('Could not create backup file for non-mongodb database')
-          }
+          writeFileSync(backupFile, await backup(connection))
+          const stats = statSync(backupFile)
+          const formattedSize = formatFileSize(stats.size)
+          logger.info(`Created production database backup file (${formattedSize}):`)
+          logger.info(backupFile)
         }
       }
-    } else {
-      setEnv('production')
     }
 
-    logger.info('Switched to ' + getEnv() + ' environment')
+    const newEnv = currentEnv === 'production' ? 'development' : 'production'
+    setEnv(newEnv)
 
-    // Delete cache of payload object
-    ;(global as any)._payload.payload = null
-    ;(global as any)._payload.promise = null
-    // Trigger Hot-Module-Replacement of payload config
-    // by updating the last accessed and last modified time of the file
-    // (this does not trigger a file change in git)
-    const time = new Date()
-    utimesSync(payloadConfigPath, time, time)
+    if (typeof req.payload.db.destroy === 'function') {
+      await req.payload.db.destroy()
+    }
+
+    const newDb = getDatabaseAdapter().init({ payload: req.payload })
+    req.payload.db = newDb as unknown as DatabaseAdapter
+    req.payload.db.payload = req.payload
+
+    if (req.payload.db.init) {
+      await req.payload.db.init()
+    }
+
+    if (req.payload.db.connect) {
+      await req.payload.db.connect()
+    }
+
+    logger.info('Switched to ' + newEnv + ' environment')
+
     const res: SwitchEndpointOutput = {
       success: true,
-      message: 'Switched to ' + getEnv(),
+      message: 'Switched to ' + newEnv,
     }
     return Response.json(res)
   },
 })
-
-const formatFileSize = (bytes: number): string => {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  let size = bytes
-  let unitIndex = 0
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024
-    unitIndex++
-  }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`
-}
