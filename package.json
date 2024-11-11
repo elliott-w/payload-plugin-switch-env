@@ -1,8 +1,8 @@
 {
   "name": "@elliott-w/payload-plugin-switch-env",
-  "version": "3.0.0-beta.0",
+  "version": "1.0.0",
   "homepage:": "https://github.com/elliott-w/payload-plugin-switch-env",
-  "description": "Payload plugin to switch environment",
+  "description": "Payload plugin to switch environments",
   "author": "Elliott Wagener",
   "license": "MIT",
   "files": [
@@ -26,21 +26,24 @@
     "prepublishOnly": "pnpm clean && pnpm build && pnpm copyfiles"
   },
   "peerDependencies": {
-    "next": "^15.0.3",
-    "payload": "beta",
     "@payloadcms/db-mongodb": "beta",
     "@payloadcms/ui": "beta",
-    "mongoose": "^6.12.3",
     "bson": "^4.7.2",
+    "mongoose": "^6.12.3",
+    "next": "^15.0.3",
+    "payload": "beta",
     "react": "^19.0.0 || ^19.0.0-rc-65a56d0e-20241020",
     "react-dom": "^19.0.0 || ^19.0.0-rc-65a56d0e-20241020"
   },
   "devDependencies": {
     "@payloadcms/eslint-config": "beta",
     "@types/node": "22.7.5",
+    "@types/react": "npm:types-react@19.0.0-rc.1",
+    "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
     "copyfiles": "^2.4.1",
     "next": "15.0.3",
     "payload": "beta",
+    "rimraf": "^6.0.1",
     "typescript": "5.5.3"
   },
   "pnpm": {
@@ -51,7 +54,7 @@
   },
   "publishConfig": {
     "main": "./dist/index.js",
-    "registry": "https://registry.npmjs.org/",
+    "registry": "https://registry.npmjs.org/@elliott-w/payload-plugin-switch-env",
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
