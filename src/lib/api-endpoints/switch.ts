@@ -13,9 +13,11 @@ export interface SwitchEndpointOutput {
   message: string
 }
 
-export interface SwitchEndpointArgs {}
+export interface SwitchEndpointArgs {
+  payloadConfigPath: string
+}
 
-export const switchEndpoint = (args?: SwitchEndpointArgs): Endpoint => ({
+export const switchEndpoint = ({ payloadConfigPath }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch',
   handler: async (req: PayloadRequest) => {
@@ -68,7 +70,7 @@ export const switchEndpoint = (args?: SwitchEndpointArgs): Endpoint => ({
     // by updating the last accessed and last modified time of the file
     // (this does not trigger a file change in git)
     const time = new Date()
-    utimesSync('payload.config.ts', time, time)
+    utimesSync(payloadConfigPath, time, time)
     const res: SwitchEndpointOutput = {
       success: true,
       message: 'Switched to ' + getEnv(),

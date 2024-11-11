@@ -61,6 +61,7 @@ export default buildConfig({
   plugins: [
     switchEnvPlugin({
       quickSwitch: true,
+      payloadConfigPath: path.resolve(dirname, 'payload.config.ts'),
       db: {
         function: mongooseAdapter,
         productionArgs: dbArgs,

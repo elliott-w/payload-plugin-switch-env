@@ -9,6 +9,7 @@ export function switchEnvPlugin<DBA>({
   db,
   enable = true,
   quickSwitch = false,
+  payloadConfigPath = './payload.config.ts',
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (incomingConfig) => {
     if (!enable) {
@@ -45,7 +46,7 @@ export function switchEnvPlugin<DBA>({
     config.globals = [
       ...(config.globals || []),
       switchEnvGlobal({
-        developmentDbaObj: db.function(db.developmentArgs),
+        payloadConfigPath,
       }),
     ]
 
