@@ -1,7 +1,7 @@
 import { APIError, type CollectionConfig, type CollectionSlug, type PayloadRequest } from 'payload'
 
 export const modifyUploadCollection = (collection: CollectionConfig): CollectionConfig => {
-  if (typeof collection.upload === 'object') {
+  if (collection.upload === true || typeof collection.upload === 'object') {
     return {
       ...collection,
       fields: [
@@ -25,7 +25,7 @@ export const modifyUploadCollection = (collection: CollectionConfig): Collection
         },
       ],
       upload: {
-        ...collection.upload,
+        ...(collection.upload === true ? {} : collection.upload),
         disableLocalStorage: false,
       },
       access: {
