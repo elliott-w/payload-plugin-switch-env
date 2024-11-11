@@ -1,6 +1,6 @@
-import type { Config, DatabaseAdapter, Plugin } from 'payload'
+import type { MongooseAdapter } from '@payloadcms/db-mongodb'
+import type { Config, Plugin } from 'payload'
 import type { SwitchEnvPluginArgs } from './types.js'
-import { afterDbConnect } from './lib/db/afterDbConnect.js'
 import { getEnv } from './lib/env.js'
 import { modifyUploadCollection } from './lib/modifyUploadCollection.js'
 import { switchEnvGlobal } from './lib/global.js'
@@ -24,7 +24,9 @@ export function switchEnvPlugin<DBA>({
 
     config.admin = {
       ...(config.admin || {}),
+
       components: {
+        views: {},
         ...(config.admin?.components || {}),
         actions: [
           ...(config.admin?.components?.actions || []),

@@ -1,8 +1,6 @@
 import { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
-import { statSync, utimesSync, writeFileSync } from 'node:fs'
 import { getEnv, setEnv } from '../env'
-import { backup } from '../db/mongo'
-import { backupFile } from '../db/backupFile'
+import { backup, restore } from '../db/mongo'
 import { formatFileSize } from '../utils'
 import { type GetDatabaseAdapter } from '../db/getDbaFunction'
 
@@ -32,15 +30,14 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
     }
     const connection = req.payload.db.connection
     const currentEnv = getEnv()
+    let backupString: string | null = null
     if (currentEnv === 'production') {
       if (req.json) {
         const body = (await req.json()) as SwitchEndpointInput
         if (body.copyDatabase) {
-          writeFileSync(backupFile, await backup(connection))
-          const stats = statSync(backupFile)
-          const formattedSize = formatFileSize(stats.size)
-          logger.info(`Created production database backup file (${formattedSize}):`)
-          logger.info(backupFile)
+          backupString = await backup(connection)
+          const formattedSize = formatFileSize(Buffer.byteLength(backupString, 'utf-8'))
+          logger.info(`Created backup of production database (${formattedSize})`)
         }
       }
     }
@@ -62,6 +59,11 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
 
     if (req.payload.db.connect) {
       await req.payload.db.connect()
+    }
+
+    if (backupString) {
+      logger.info('Restoring production database backup to local')
+      await restore(req.payload.db.connection, backupString, req.payload.logger)
     }
 
     logger.info('Switched to ' + newEnv + ' environment')
