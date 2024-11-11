@@ -1,7 +1,33 @@
-import { APIError, type CollectionConfig, type CollectionSlug, type PayloadRequest } from 'payload'
+import {
+  APIError,
+  type Access,
+  type SanitizedCollectionConfig,
+  type CollectionConfig,
+  type CollectionSlug,
+  type PayloadRequest,
+} from 'payload'
+import { getEnv } from './env'
 
-export const modifyUploadCollection = (collection: CollectionConfig): CollectionConfig => {
+const collectionMap: Record<
+  string,
+  {
+    update: Access | undefined
+    delete: Access | undefined
+  }
+> = {}
+
+export const addDevelopmentSettingsToUploadCollection = <
+  T extends CollectionConfig | SanitizedCollectionConfig,
+>(
+  collection: T,
+): T => {
   if (collection.upload === true || typeof collection.upload === 'object') {
+    if (!(collection.slug in collectionMap)) {
+      collectionMap[collection.slug] = {
+        update: collection.access?.update,
+        delete: collection.access?.delete,
+      }
+    }
     return {
       ...collection,
       fields: [
@@ -31,7 +57,8 @@ export const modifyUploadCollection = (collection: CollectionConfig): Collection
       access: {
         ...(collection.access || {}),
         update: async (args) => {
-          const result = collection.access?.update ? await collection.access.update(args) : true
+          const oldUpdate = collectionMap[collection.slug]?.update
+          const result = oldUpdate ? await oldUpdate(args) : true
           if (args.data) {
             return args.data.createdDuringDevelopment
           } else {
@@ -48,7 +75,8 @@ export const modifyUploadCollection = (collection: CollectionConfig): Collection
           }
         },
         delete: async (args) => {
-          const result = collection.access?.delete ? await collection.access.delete(args) : true
+          const oldDelete = collectionMap[collection.slug]?.delete
+          const result = oldDelete ? await oldDelete(args) : true
           if (args.data) {
             return args.data.createdDuringDevelopment
           } else {
@@ -64,6 +92,33 @@ export const modifyUploadCollection = (collection: CollectionConfig): Collection
             return result
           }
         },
+      },
+    }
+  }
+  return collection
+}
+
+export const removeDevelopmentSettingsFromUploadCollection = <
+  T extends CollectionConfig | SanitizedCollectionConfig,
+>(
+  collection: T,
+): T => {
+  if (collection.upload === true || typeof collection.upload === 'object') {
+    const oldFields = collection.fields || []
+    const newFields = oldFields.filter(
+      (field) => !('name' in field && field.name === 'createdDuringDevelopment'),
+    )
+    return {
+      ...collection,
+      fields: newFields,
+      upload: {
+        ...(collection.upload === true ? {} : collection.upload),
+        disableLocalStorage: true,
+      },
+      access: {
+        ...(collection.access || {}),
+        update: collectionMap[collection.slug]?.update,
+        delete: collectionMap[collection.slug]?.delete,
       },
     }
   }

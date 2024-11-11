@@ -3,6 +3,10 @@ import { getEnv, setEnv } from '../env'
 import { backup, restore } from '../db/mongo'
 import { formatFileSize } from '../utils'
 import { type GetDatabaseAdapter } from '../db/getDbaFunction'
+import {
+  addDevelopmentSettingsToUploadCollection,
+  removeDevelopmentSettingsFromUploadCollection,
+} from '../modifyUploadCollection'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -65,6 +69,14 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
       logger.info('Restoring production database backup to local')
       await restore(req.payload.db.connection, backupString, req.payload.logger)
     }
+
+    Object.entries(req.payload.collections || {}).forEach(([slug, collection]) => {
+      if (newEnv === 'development') {
+        collection.config = addDevelopmentSettingsToUploadCollection(collection.config)
+      } else {
+        collection.config = removeDevelopmentSettingsFromUploadCollection(collection.config)
+      }
+    })
 
     logger.info('Switched to ' + newEnv + ' environment')
 

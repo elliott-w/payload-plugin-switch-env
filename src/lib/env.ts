@@ -6,14 +6,21 @@ const tmpFile = path.posix.join(os.tmpdir(), 'payload-env.txt')
 
 export type Env = 'production' | 'development'
 
+;(global as any).env = undefined
+
 export const getEnv = (): Env => {
-  if (existsSync(tmpFile)) {
-    return readFileSync(tmpFile, 'utf8') as Env
+  if ((global as any).env) {
+    return (global as any).env
+  } else if (existsSync(tmpFile)) {
+    ;(global as any).env = readFileSync(tmpFile, 'utf8') as Env
+    return (global as any).env
   } else {
-    return 'development'
+    ;(global as any).env = 'development'
+    return (global as any).env
   }
 }
 
-export const setEnv = (env: Env) => {
-  writeFileSync(tmpFile, env)
+export const setEnv = (newEnv: Env) => {
+  writeFileSync(tmpFile, newEnv)
+  ;(global as any).env = newEnv
 }

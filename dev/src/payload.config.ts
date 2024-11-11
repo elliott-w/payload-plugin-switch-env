@@ -60,7 +60,7 @@ export default buildConfig({
   },
   plugins: [
     switchEnvPlugin({
-      // quickSwitch: true,
+      quickSwitch: true,
       db: {
         function: mongooseAdapter,
         productionArgs: dbArgs,
