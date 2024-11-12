@@ -12,10 +12,6 @@ export interface SwitchEnvPluginArgs<DBA> {
    * Enable or disable the plugin
    * @default true
    */
-  /**
-   * @default "./payload.config.ts"
-   */
-  payloadConfigPath?: string
   enable?: boolean
   /**
    * This will prevent the modal from appearing when clicking the switch button.
