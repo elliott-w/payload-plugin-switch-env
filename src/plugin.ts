@@ -2,7 +2,10 @@ import type { MongooseAdapter } from '@payloadcms/db-mongodb'
 import type { Config, Plugin } from 'payload'
 import type { SwitchEnvPluginArgs } from './types.js'
 import { getEnv } from './lib/env.js'
-import { addDevelopmentSettingsToUploadCollection } from './lib/modifyUploadCollection.js'
+import {
+  addAccessSettingsToUploadCollection,
+  addDevelopmentSettingsToUploadCollection,
+} from './lib/modifyUploadCollection.js'
 import { switchEnvGlobal } from './lib/global.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
 
@@ -64,6 +67,9 @@ export function switchEnvPlugin<DBA>({
       }
       return c
     })
+
+    config.collections = (config.collections || []).map(addAccessSettingsToUploadCollection)
+
     if (process.env.NODE_ENV === 'development' && env === 'development') {
       config.collections = (config.collections || []).map(addDevelopmentSettingsToUploadCollection)
     }

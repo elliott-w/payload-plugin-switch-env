@@ -8,13 +8,64 @@ import {
 } from 'payload'
 import { getEnv } from './env'
 
-const collectionMap: Record<
-  string,
-  {
-    update: Access | undefined
-    delete: Access | undefined
+export const addAccessSettingsToUploadCollection = (
+  collection: CollectionConfig,
+): CollectionConfig => {
+  if (collection.upload === true || typeof collection.upload === 'object') {
+    return {
+      ...collection,
+      access: {
+        ...(collection.access || {}),
+        update: async (args) => {
+          const oldUpdate = collection.access?.update
+          const result = oldUpdate ? await oldUpdate(args) : true
+          if (process.env.NODE_ENV === 'development' && getEnv() === 'development') {
+            if (args.data) {
+              return !!args.data.createdDuringDevelopment
+            } else {
+              const access = !(await operatingOnAnyDocumentNotCreatedDuringDevelopment(
+                args.req,
+                collection.slug as CollectionSlug,
+                args.id?.toString(),
+              ))
+              if (!access) {
+                throw new APIError(
+                  'Cannot update upload collection documents that were not created during development, as it will potentially modify the file(s) in cloud storage.',
+                )
+              }
+              return result
+            }
+          }
+          return result
+        },
+        delete: async (args) => {
+          const oldDelete = collection.access?.delete
+          const result = oldDelete ? await oldDelete(args) : true
+          const env = getEnv()
+          if (process.env.NODE_ENV === 'development' && env === 'development') {
+            if (args.data) {
+              return !!args.data.createdDuringDevelopment
+            } else {
+              const access = !(await operatingOnAnyDocumentNotCreatedDuringDevelopment(
+                args.req,
+                collection.slug as CollectionSlug,
+                args.id?.toString(),
+              ))
+              if (!access) {
+                throw new APIError(
+                  'Cannot delete upload collection documents that were not created during development, as it will delete the file(s) in cloud storage.',
+                )
+              }
+              return result
+            }
+          }
+          return result
+        },
+      },
+    }
   }
-> = {}
+  return collection
+}
 
 export const addDevelopmentSettingsToUploadCollection = <
   T extends CollectionConfig | SanitizedCollectionConfig,
@@ -22,12 +73,6 @@ export const addDevelopmentSettingsToUploadCollection = <
   collection: T,
 ): T => {
   if (collection.upload === true || typeof collection.upload === 'object') {
-    if (!(collection.slug in collectionMap)) {
-      collectionMap[collection.slug] = {
-        update: collection.access?.update,
-        delete: collection.access?.delete,
-      }
-    }
     return {
       ...collection,
       fields: [
@@ -54,45 +99,6 @@ export const addDevelopmentSettingsToUploadCollection = <
         ...(collection.upload === true ? {} : collection.upload),
         disableLocalStorage: false,
       },
-      access: {
-        ...(collection.access || {}),
-        update: async (args) => {
-          const oldUpdate = collectionMap[collection.slug]?.update
-          const result = oldUpdate ? await oldUpdate(args) : true
-          if (args.data) {
-            return args.data.createdDuringDevelopment
-          } else {
-            const access = !(await operatingOnAnyDocumentNotCreatedDuringDevelopment(
-              args.req,
-              collection.slug as CollectionSlug,
-            ))
-            if (!access) {
-              throw new APIError(
-                'Cannot update upload collection documents that were not created during development, as it will potentially modify the file(s) in cloud storage.',
-              )
-            }
-            return result
-          }
-        },
-        delete: async (args) => {
-          const oldDelete = collectionMap[collection.slug]?.delete
-          const result = oldDelete ? await oldDelete(args) : true
-          if (args.data) {
-            return args.data.createdDuringDevelopment
-          } else {
-            const access = !(await operatingOnAnyDocumentNotCreatedDuringDevelopment(
-              args.req,
-              collection.slug as CollectionSlug,
-            ))
-            if (!access) {
-              throw new APIError(
-                'Cannot delete upload collection documents that were not created during development, as it will delete the file(s) in cloud storage.',
-              )
-            }
-            return result
-          }
-        },
-      },
     }
   }
   return collection
@@ -115,11 +121,6 @@ export const removeDevelopmentSettingsFromUploadCollection = <
         ...(collection.upload === true ? {} : collection.upload),
         disableLocalStorage: true,
       },
-      access: {
-        ...(collection.access || {}),
-        update: collectionMap[collection.slug]?.update,
-        delete: collectionMap[collection.slug]?.delete,
-      },
     }
   }
   return collection
@@ -128,10 +129,15 @@ export const removeDevelopmentSettingsFromUploadCollection = <
 const operatingOnAnyDocumentNotCreatedDuringDevelopment = async (
   req: PayloadRequest,
   collectionSlug: CollectionSlug,
+  id?: string,
 ) => {
   const documentIds = Array.from(req.searchParams.entries())
     .filter(([key]) => key.startsWith('where[id][in]'))
     .map(([_, value]) => value)
+
+  if (id) {
+    documentIds.push(id)
+  }
 
   if (documentIds.length == 0) {
     return false
