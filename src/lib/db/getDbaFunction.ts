@@ -1,4 +1,4 @@
-import { SwitchEnvPluginArgs } from '../../types'
+import { type SwitchEnvPluginArgs } from '../../types'
 import { getEnv } from '../env'
 
 export const getDbaFunction =

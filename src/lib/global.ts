@@ -1,5 +1,5 @@
-import { GlobalConfig } from 'payload'
-import { switchEndpoint, SwitchEndpointArgs } from './api-endpoints/switch'
+import type { GlobalConfig } from 'payload'
+import { switchEndpoint, type SwitchEndpointArgs } from './api-endpoints/switch'
 import { switchEnvGlobalSlug } from './slugs'
 
 export const switchEnvGlobal = (switchEndpointArgs: SwitchEndpointArgs): GlobalConfig => {

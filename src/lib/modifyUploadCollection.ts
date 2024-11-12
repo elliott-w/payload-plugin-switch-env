@@ -1,6 +1,5 @@
 import {
   APIError,
-  type Access,
   type SanitizedCollectionConfig,
   type CollectionConfig,
   type CollectionSlug,
@@ -86,15 +85,43 @@ export const addDevelopmentSettingsToUploadCollection = <
           },
           hooks: {
             beforeChange: [
-              async ({ operation }) => {
+              async ({ operation, req }) => {
+                console.log('beforeChange', operation)
                 if (operation === 'create') {
                   return true
                 }
               },
             ],
+            afterChange: [
+              async ({ previousValue, value }) => {
+                console.log('previousValue', previousValue, 'value', value)
+              },
+            ],
           },
         },
       ],
+      hooks: {
+        ...(collection.hooks || {}),
+        beforeChange: [
+          ...(collection.hooks?.beforeChange || []),
+          async ({ operation, data, req }) => {
+            console.log('------ before change collection -------')
+            console.log(req.payload.collections.media.config.fields)
+            console.log('beforeChange', data)
+            if (operation === 'create') {
+              data.createdDuringDevelopment = true
+            }
+            return data
+          },
+        ],
+        afterChange: [
+          ...(collection.hooks?.afterChange || []),
+          async ({ operation, doc }) => {
+            console.log('afterChange', doc)
+            return doc
+          },
+        ],
+      },
       upload: {
         ...(collection.upload === true ? {} : collection.upload),
         disableLocalStorage: false,
