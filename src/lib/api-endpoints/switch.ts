@@ -1,8 +1,8 @@
-import { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
+import type { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
 import { getEnv, setEnv } from '../env'
 import { backup, restore } from '../db/mongo'
 import { formatFileSize } from '../utils'
-import { type GetDatabaseAdapter } from '../db/getDbaFunction'
+import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import {
   addDevelopmentSettingsToUploadCollection,
   removeDevelopmentSettingsFromUploadCollection,
@@ -53,6 +53,24 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
       await req.payload.db.destroy()
     }
 
+    req.payload.config.collections = Object.values(req.payload.config.collections || []).map(
+      (collection) => {
+        if (newEnv === 'development') {
+          return addDevelopmentSettingsToUploadCollection(collection)
+        } else {
+          return removeDevelopmentSettingsFromUploadCollection(collection)
+        }
+      },
+    )
+
+    Object.values(req.payload.collections || {}).forEach((collection) => {
+      if (newEnv === 'development') {
+        collection.config = addDevelopmentSettingsToUploadCollection(collection.config)
+      } else {
+        collection.config = removeDevelopmentSettingsFromUploadCollection(collection.config)
+      }
+    })
+
     const newDb = getDatabaseAdapter().init({ payload: req.payload })
     req.payload.db = newDb as unknown as DatabaseAdapter
     req.payload.db.payload = req.payload
@@ -69,14 +87,6 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
       logger.info('Restoring production database backup to local')
       await restore(req.payload.db.connection, backupString, req.payload.logger)
     }
-
-    Object.entries(req.payload.collections || {}).forEach(([slug, collection]) => {
-      if (newEnv === 'development') {
-        collection.config = addDevelopmentSettingsToUploadCollection(collection.config)
-      } else {
-        collection.config = removeDevelopmentSettingsFromUploadCollection(collection.config)
-      }
-    })
 
     logger.info('Switched to ' + newEnv + ' environment')
 
