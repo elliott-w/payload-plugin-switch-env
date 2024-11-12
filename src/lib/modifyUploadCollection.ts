@@ -4,6 +4,7 @@ import {
   type CollectionConfig,
   type CollectionSlug,
   type PayloadRequest,
+  type BasePayload,
 } from 'payload'
 import { getEnv } from './env'
 
@@ -66,7 +67,7 @@ export const addAccessSettingsToUploadCollection = (
   return collection
 }
 
-export const addDevelopmentSettingsToUploadCollection = <
+const addDevelopmentSettingsToUploadCollection = <
   T extends CollectionConfig | SanitizedCollectionConfig,
 >(
   collection: T,
@@ -85,43 +86,15 @@ export const addDevelopmentSettingsToUploadCollection = <
           },
           hooks: {
             beforeChange: [
-              async ({ operation, req }) => {
-                console.log('beforeChange', operation)
+              async ({ operation }) => {
                 if (operation === 'create') {
                   return true
                 }
               },
             ],
-            afterChange: [
-              async ({ previousValue, value }) => {
-                console.log('previousValue', previousValue, 'value', value)
-              },
-            ],
           },
         },
       ],
-      hooks: {
-        ...(collection.hooks || {}),
-        beforeChange: [
-          ...(collection.hooks?.beforeChange || []),
-          async ({ operation, data, req }) => {
-            console.log('------ before change collection -------')
-            console.log(req.payload.collections.media.config.fields)
-            console.log('beforeChange', data)
-            if (operation === 'create') {
-              data.createdDuringDevelopment = true
-            }
-            return data
-          },
-        ],
-        afterChange: [
-          ...(collection.hooks?.afterChange || []),
-          async ({ operation, doc }) => {
-            console.log('afterChange', doc)
-            return doc
-          },
-        ],
-      },
       upload: {
         ...(collection.upload === true ? {} : collection.upload),
         disableLocalStorage: false,
@@ -131,7 +104,7 @@ export const addDevelopmentSettingsToUploadCollection = <
   return collection
 }
 
-export const removeDevelopmentSettingsFromUploadCollection = <
+const removeDevelopmentSettingsFromUploadCollection = <
   T extends CollectionConfig | SanitizedCollectionConfig,
 >(
   collection: T,
@@ -151,6 +124,25 @@ export const removeDevelopmentSettingsFromUploadCollection = <
     }
   }
   return collection
+}
+
+export const modifyUploadCollections = (payload: BasePayload) => {
+  const env = getEnv()
+  payload.config.collections = Object.values(payload.config.collections || []).map((collection) => {
+    if (env === 'development') {
+      return addDevelopmentSettingsToUploadCollection(collection)
+    } else {
+      return removeDevelopmentSettingsFromUploadCollection(collection)
+    }
+  })
+
+  Object.values(payload.collections || {}).forEach((collection) => {
+    if (env === 'development') {
+      collection.config = addDevelopmentSettingsToUploadCollection(collection.config)
+    } else {
+      collection.config = removeDevelopmentSettingsFromUploadCollection(collection.config)
+    }
+  })
 }
 
 const operatingOnAnyDocumentNotCreatedDuringDevelopment = async (

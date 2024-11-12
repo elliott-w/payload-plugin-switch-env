@@ -3,10 +3,7 @@ import { getEnv, setEnv } from '../env'
 import { backup, restore } from '../db/mongo'
 import { formatFileSize } from '../utils'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
-import {
-  addDevelopmentSettingsToUploadCollection,
-  removeDevelopmentSettingsFromUploadCollection,
-} from '../modifyUploadCollection'
+import { modifyUploadCollections } from '../modifyUploadCollection'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -53,23 +50,7 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
       await req.payload.db.destroy()
     }
 
-    req.payload.config.collections = Object.values(req.payload.config.collections || []).map(
-      (collection) => {
-        if (newEnv === 'development') {
-          return addDevelopmentSettingsToUploadCollection(collection)
-        } else {
-          return removeDevelopmentSettingsFromUploadCollection(collection)
-        }
-      },
-    )
-
-    Object.values(req.payload.collections || {}).forEach((collection) => {
-      if (newEnv === 'development') {
-        collection.config = addDevelopmentSettingsToUploadCollection(collection.config)
-      } else {
-        collection.config = removeDevelopmentSettingsFromUploadCollection(collection.config)
-      }
-    })
+    modifyUploadCollections(req.payload)
 
     const newDb = getDatabaseAdapter().init({ payload: req.payload })
     req.payload.db = newDb as unknown as DatabaseAdapter
