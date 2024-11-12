@@ -24,11 +24,8 @@ export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, qui
     config: {
       serverURL,
       routes: { api: apiRoute },
-      collections,
     },
   } = useConfig()
-
-  console.log(collections.find((c) => c.slug === 'media')?.fields)
 
   const { openModal, closeModal } = useModal()
   const router = useRouter()

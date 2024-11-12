@@ -52,22 +52,6 @@ export function switchEnvPlugin<DBA>({
       }),
     ]
 
-    config.collections = (config.collections || []).map((c) => {
-      if (c.upload === true || typeof c.upload === 'object') {
-        return {
-          ...c,
-          access: {
-            ...(c.access || {}),
-            update: () => {
-              console.log('update check')
-              return true
-            },
-          },
-        }
-      }
-      return c
-    })
-
     config.collections = (config.collections || []).map(addAccessSettingsToUploadCollection)
 
     if (process.env.NODE_ENV === 'development' && env === 'development') {
