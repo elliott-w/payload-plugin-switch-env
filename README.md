@@ -1,3 +1,10 @@
+# Payload plugin switch env
+
+
+```
+pnpm i @elliott-w/payload-plugin-switch-env
+```
+
 This plugin only works with:
 
 - payload 3.0.0-beta
@@ -6,7 +13,7 @@ This plugin only works with:
 
 &nbsp;
 
-# Why this plugin?
+## Why this plugin?
 
 ### Scenario #1
 You're working with a production database that is getting frequently updated and you want to push a feature that requires code + database changes.
