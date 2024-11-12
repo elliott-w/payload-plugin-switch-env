@@ -5,12 +5,13 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import { testEmailAdapter } from './emailAdapter'
 import { switchEnvPlugin } from '@elliott-w/payload-plugin-switch-env'
+import { s3Storage } from '@payloadcms/storage-s3'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 const dbArgs: Args = {
-  url: process.env.PRODUCTION_MONGODB_URI || '',
+  url: process.env.PRODUCTION_MONGODB_URI!,
 }
 
 export default buildConfig({
@@ -21,7 +22,6 @@ export default buildConfig({
     },
     user: 'users',
   },
-
   collections: [
     {
       slug: 'users',
@@ -59,6 +59,19 @@ export default buildConfig({
     outputFile: path.resolve(dirname, 'payload-types.ts'),
   },
   plugins: [
+    s3Storage({
+      bucket: process.env.S3_BUCKET!,
+      collections: {
+        media: true,
+      },
+      config: {
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+        },
+        region: process.env.S3_REGION,
+      },
+    }),
     switchEnvPlugin({
       quickSwitch: true,
       db: {
