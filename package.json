@@ -60,6 +60,7 @@
     "main": "./dist/index.js",
     "registry": "https://registry.npmjs.org/@elliott-w/payload-plugin-switch-env",
     "types": "./dist/index.d.ts",
+    "access": "public",
     "exports": {
       ".": {
         "import": "./dist/index.js",
