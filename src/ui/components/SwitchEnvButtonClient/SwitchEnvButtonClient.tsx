@@ -27,6 +27,11 @@ export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, qui
     },
   } = useConfig()
 
+  useEffect(() => {
+    console.log('re-render')
+    console.log(env)
+  })
+
   const { openModal, closeModal } = useModal()
   const router = useRouter()
   const hasRefreshed = useRef(false)

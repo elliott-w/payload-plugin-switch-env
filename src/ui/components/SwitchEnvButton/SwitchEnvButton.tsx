@@ -8,6 +8,7 @@ export type SwitchEnvButtonProps = {
 
 export const SwitchEnvButton: FC<SwitchEnvButtonProps> = async ({ quickSwitch }) => {
   const env = getEnv()
+  console.log(`---------- ${env} ----------`)
   return <SwitchEnvButtonClient env={env} quickSwitch={quickSwitch} />
 }
 
