@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  # Ensure your DATABASE_URI uses 'mongo' as the hostname ie. mongodb://mongo/my-db-name
+  mongo:
+    image: mongo:latest
+    ports:
+      - '27017:27017'
+    command:
+      - --storageEngine=wiredTiger
+    volumes:
+      - payload_db_test:/data/db
+    logging:
+      driver: none
+
+
+volumes:
+  payload_db_test:
+    external: true
