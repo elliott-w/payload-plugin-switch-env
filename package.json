@@ -30,23 +30,23 @@
     "prepublishOnly": "pnpm clean && pnpm build && pnpm copyfiles"
   },
   "peerDependencies": {
-    "@payloadcms/db-mongodb": "beta",
-    "@payloadcms/ui": "beta",
-    "bson": "^4.7.2",
-    "mongoose": "^6.12.3",
+    "@payloadcms/db-mongodb": "^3.0.1",
+    "@payloadcms/ui": "^3.0.1",
+    "bson": "^6.7.0",
+    "mongoose": "^8.8.1",
     "next": "^15.0.3",
-    "payload": "beta",
+    "payload": "^3.0.1",
     "react": "^19.0.0 || ^19.0.0-rc-65a56d0e-20241020",
     "react-dom": "^19.0.0 || ^19.0.0-rc-65a56d0e-20241020"
   },
   "devDependencies": {
-    "@payloadcms/eslint-config": "beta",
+    "@payloadcms/eslint-config": "^3.0.0",
     "@types/node": "22.7.5",
     "@types/react": "npm:types-react@19.0.0-rc.1",
     "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
     "copyfiles": "^2.4.1",
     "next": "15.0.3",
-    "payload": "beta",
+    "payload": "^3.0.1",
     "rimraf": "^6.0.1",
     "typescript": "5.5.3"
   },
