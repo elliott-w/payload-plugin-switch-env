@@ -6,17 +6,15 @@ import { switchEnvGlobalSlug } from '../../../lib/slugs'
 import type { Env } from '../../../lib/env'
 import './SwitchEnvButtonClient.scss'
 import { useRouter } from 'next/navigation'
-import {
-  type SwitchEndpointInput,
-  type SwitchEndpointOutput,
-} from '../../../lib/api-endpoints/switch'
-import { InfoIcon, LoadingSpinnerIcon, SwitchIcon, WarningIcon } from './icons'
+import type { SwitchEndpointInput, SwitchEndpointOutput } from '../../../lib/api-endpoints/switch'
+import { InfoIcon, LoadingSpinnerIcon, SwitchIcon } from './icons'
+import type { QuickSwitchArgs } from '../../../types'
 
 const baseClass = 'switch-env'
 
 export interface SwitchEnvButtonClientProps {
   env: Env
-  quickSwitch: boolean
+  quickSwitch: QuickSwitchArgs
 }
 
 export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, quickSwitch }) => {
@@ -58,7 +56,9 @@ export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, qui
     },
   })
   const targetEnv = env === 'production' ? 'Development' : 'Production'
-  const [copyDatabase, setCopyDatabase] = useState(quickSwitch)
+  const [copyDatabase, setCopyDatabase] = useState(
+    quickSwitch ? quickSwitch.overwriteDevelopmentDatabase : false,
+  )
   const [showCopyDatabaseTooltip, setShowCopyDatabaseTooltip] = useState(false)
 
   return (

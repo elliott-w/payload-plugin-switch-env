@@ -6,6 +6,16 @@ interface DatabaseAdapterArgs<T> {
   developmentArgs: T
 }
 
+export type QuickSwitchArgs =
+  | {
+      /**
+       * When switching from production to development, should your development
+       * database be overwritten with the production database?
+       */
+      overwriteDevelopmentDatabase: boolean
+    }
+  | false
+
 export interface SwitchEnvPluginArgs<DBA> {
   db: DatabaseAdapterArgs<DBA>
   /**
@@ -15,10 +25,8 @@ export interface SwitchEnvPluginArgs<DBA> {
   enable?: boolean
   /**
    * This will prevent the modal from appearing when clicking the switch button.
-   * Instead the environment will be switched immediately. WARNING: If this is
-   * set to true, switching from production to development will always copy the
-   * production database and overwrite your development database with it.
+   * Instead the environment will be switched immediately.
    * @default false
    */
-  quickSwitch?: boolean
+  quickSwitch?: QuickSwitchArgs
 }

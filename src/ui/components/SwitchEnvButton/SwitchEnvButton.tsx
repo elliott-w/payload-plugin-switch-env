@@ -1,9 +1,10 @@
-import { FC } from 'react'
+import type { FC } from 'react'
 import { SwitchEnvButtonClient } from '../SwitchEnvButtonClient/SwitchEnvButtonClient'
 import { getEnv } from '../../../lib/env'
+import type { QuickSwitchArgs } from '../../../types'
 
 export type SwitchEnvButtonProps = {
-  quickSwitch: boolean
+  quickSwitch: QuickSwitchArgs
 }
 
 export const SwitchEnvButton: FC<SwitchEnvButtonProps> = async ({ quickSwitch }) => {
