@@ -1,5 +1,13 @@
 # Payload plugin switch env
 
+## Demo
+
+<video>
+  <source src="./demo.webm" type="video/webm">
+</video>
+
+
+## Install
 
 ```
 pnpm i @elliott-w/payload-plugin-switch-env
@@ -7,7 +15,7 @@ pnpm i @elliott-w/payload-plugin-switch-env
 
 This plugin only works with:
 
-- payload 3.0.0-beta
+- payload 3.x
 - mongodb
 - any cloud storage adapter (does not support local file storage)
 
