@@ -33,30 +33,6 @@
     }
   }
 
-  &__btn-warning {
-    cursor: pointer;
-    background-color: var(--red-50);
-    border-radius: 9999px;
-    border: 0;
-    padding: base(0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: base(0.2);
-    &__icon {
-      color: var(--red-700);
-      width: base(0.8);
-      height: base(0.8);
-    }
-    &__text {
-      font-size: base(0.6);
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      color: var(--red-700);
-    }
-  }
-
   &__modal {
     display: flex;
     justify-content: center;

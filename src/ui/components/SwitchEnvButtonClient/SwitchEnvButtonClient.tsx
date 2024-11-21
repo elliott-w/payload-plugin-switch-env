@@ -63,15 +63,6 @@ export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, qui
 
   return (
     <div className={`${baseClass}`}>
-      {env == 'production' && (
-        <button
-          className={`${baseClass}__btn-warning`}
-          onClick={() => openModal('switch-env-warning')}
-        >
-          <WarningIcon className={`${baseClass}__btn-warning__icon`} />
-          <span className={`${baseClass}__btn-warning__text`}>DANGER</span>
-        </button>
-      )}
       <button
         className={`${baseClass}__btn-switch`}
         onClick={() => {
@@ -131,18 +122,6 @@ export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, qui
           </Button>
         </div>
       </Modal>
-      {env == 'production' && (
-        <Modal slug="switch-env-warning" className={`${baseClass}__modal`}>
-          <div
-            className={`${baseClass}__modal-close`}
-            onClick={() => closeModal('switch-env-warning')}
-          ></div>
-          <div className={`${baseClass}__modal-content`}>
-            <h4>You are currently editing in a production environment</h4>
-            <p>Be careful!</p>
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }

@@ -31,6 +31,12 @@ export function switchEnvPlugin<DBA>({
       components: {
         views: {},
         ...(config.admin?.components || {}),
+        header: [
+          ...(config.admin?.components?.header || []),
+          {
+            path: '@elliott-w/payload-plugin-switch-env/client#DangerBar',
+          },
+        ],
         actions: [
           ...(config.admin?.components?.actions || []),
           {
