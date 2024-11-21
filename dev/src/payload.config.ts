@@ -16,9 +16,6 @@ export default buildConfig({
   db: mongooseAdapter(dbArgs),
   plugins: [
     switchEnvPlugin({
-      quickSwitch: {
-        overwriteDevelopmentDatabase: true,
-      },
       db: {
         function: mongooseAdapter,
         productionArgs: dbArgs,
