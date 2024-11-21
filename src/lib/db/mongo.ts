@@ -9,6 +9,9 @@ import { type BasePayload } from 'payload'
  */
 export async function backup(connection: Connection): Promise<string> {
   const db = connection.db
+  if (!db) {
+    throw new Error('Could not make backup: database connection not established')
+  }
   const collections = await db.listCollections().toArray()
 
   const backupData: {
@@ -39,7 +42,6 @@ export async function backup(connection: Connection): Promise<string> {
  * Restores the database with the data from the provided JSON string.
  * @param connection - The Mongoose connection to the MongoDB database.
  * @param jsonString - The JSON string containing the backup data.
- * @returns A promise that resolves to a string indicating the completion of the restore operation.
  */
 export async function restore(
   connection: Connection,
@@ -51,6 +53,9 @@ export async function restore(
     indexes: { [collectionName: string]: any[] }
   }
   const db = connection.db
+  if (!db) {
+    throw new Error('Could not restore database: database connection not established')
+  }
 
   await connection.dropDatabase()
 
