@@ -1,3 +1,4 @@
+// This import is required for the connection object to be typed on the payload.db object
 import type { MongooseAdapter } from '@payloadcms/db-mongodb'
 import type { Config, Plugin } from 'payload'
 import type { SwitchEnvPluginArgs } from './types.js'
