@@ -2,9 +2,7 @@
 
 ## Demo
 
-<video>
-  <source src="./demo.webm" type="video/webm">
-</video>
+[demo.webm](https://github.com/user-attachments/assets/37e889c0-e0e9-472c-bdce-fc7f76166100)
 
 
 ## Install
