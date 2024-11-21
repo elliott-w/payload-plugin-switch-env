@@ -23,16 +23,10 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
   path: '/switch',
   handler: async (req: PayloadRequest) => {
     const logger = req.payload.logger
-    if (process.env.NODE_ENV === 'production') {
-      return Response.json({
-        success: false,
-        message: 'This endpoint is only available in development mode',
-      })
-    }
     const connection = req.payload.db.connection
-    const currentEnv = getEnv()
+    const env = getEnv()
     let backupString: string | null = null
-    if (currentEnv === 'production') {
+    if (env === 'production') {
       if (req.json) {
         const body = (await req.json()) as SwitchEndpointInput
         if (body.copyDatabase) {
@@ -43,7 +37,7 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
       }
     }
 
-    const newEnv = currentEnv === 'production' ? 'development' : 'production'
+    const newEnv = env === 'production' ? 'development' : 'production'
     setEnv(newEnv)
 
     if (typeof req.payload.db.destroy === 'function') {

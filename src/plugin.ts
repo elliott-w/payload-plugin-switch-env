@@ -15,7 +15,7 @@ export function switchEnvPlugin<DBA>({
   quickSwitch = false,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (incomingConfig) => {
-    if (!enable) {
+    if (!enable || process.env.NODE_ENV !== 'development') {
       return incomingConfig
     }
 
@@ -63,9 +63,7 @@ export function switchEnvPlugin<DBA>({
     const oldInit = config.onInit
     if (oldInit) {
       config.onInit = async (payload) => {
-        if (process.env.NODE_ENV === 'development') {
-          modifyUploadCollections(payload)
-        }
+        modifyUploadCollections(payload)
         if (oldInit) {
           await oldInit(payload)
         }

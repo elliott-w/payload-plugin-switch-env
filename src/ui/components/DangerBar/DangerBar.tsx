@@ -4,7 +4,7 @@ import './DangerBar.scss'
 import { WarningIcon } from '../SwitchEnvButtonClient/icons'
 
 export const DangerBar: FC = async () => {
-  if (!(process.env.NODE_ENV === 'development' && getEnv() === 'production')) {
+  if (getEnv() === 'production') {
     return null
   }
 
