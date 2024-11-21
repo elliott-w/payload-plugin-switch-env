@@ -11,9 +11,13 @@
 pnpm i @elliott-w/payload-plugin-switch-env
 ```
 
-This plugin only works with:
+## Limitations
 
-- payload 3.x
+Does not support database migrations.
+
+Only works with:
+
+- payload 3.0.2 and higher
 - mongodb
 - any cloud storage adapter (does not support local file storage)
 
