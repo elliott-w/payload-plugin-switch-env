@@ -16,7 +16,10 @@ export function switchEnvPlugin<DBA>({
   quickSwitch = false,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (incomingConfig) => {
-    if (!enable || process.env.NODE_ENV !== 'development') {
+    if (
+      !enable ||
+      (typeof process.env.NODE_ENV === 'string' && process.env.NODE_ENV !== 'development')
+    ) {
       return incomingConfig
     }
 
