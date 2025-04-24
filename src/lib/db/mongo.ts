@@ -1,5 +1,5 @@
 import { type Connection } from 'mongoose'
-import { EJSON } from 'bson'
+import { BSON } from 'bson'
 import { type BasePayload } from 'payload'
 
 /**
@@ -35,20 +35,24 @@ export async function backup(connection: Connection): Promise<string> {
     backupData.indexes[collectionName] = indexes
   }
 
-  return EJSON.stringify(backupData)
+  // Serialize to BSON and then to base64 string
+  const bsonData = BSON.serialize(backupData)
+  return Buffer.from(bsonData).toString('base64')
 }
 
 /**
- * Restores the database with the data from the provided JSON string.
+ * Restores the database with the data from the provided base64 string.
  * @param connection - The Mongoose connection to the MongoDB database.
- * @param jsonString - The JSON string containing the backup data.
+ * @param base64String - The base64 string containing the serialized backup data.
  */
 export async function restore(
   connection: Connection,
-  jsonString: string,
+  base64String: string,
   logger: BasePayload['logger'],
 ): Promise<void> {
-  const backupData = EJSON.parse(jsonString) as {
+  // Deserialize from base64 string to BSON and then to object
+  const bsonData = Buffer.from(base64String, 'base64')
+  const backupData = BSON.deserialize(bsonData) as {
     collections: { [collectionName: string]: any[] }
     indexes: { [collectionName: string]: any[] }
   }
