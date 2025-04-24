@@ -149,7 +149,9 @@ const operatingOnAnyDocumentNotCreatedDuringDevelopment = async (
   collectionSlug: CollectionSlug,
   id?: string,
 ) => {
-  const documentIds = Array.from(req.searchParams.entries()).map(([_, value]) => value)
+  const documentIds = Array.from(req.searchParams.entries())
+    .filter(([key, _]) => key.includes('id'))
+    .map(([_, value]) => value)
 
   if (id) {
     documentIds.push(id)
