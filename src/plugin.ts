@@ -5,7 +5,7 @@ import type { SwitchEnvPluginArgs } from './types.js'
 import { getEnv } from './lib/env.js'
 import {
   addAccessSettingsToUploadCollection,
-  modifyUploadCollections,
+  addDevelopmentSettingsToUploadCollection,
 } from './lib/modifyUploadCollection.js'
 import { switchEnvGlobal } from './lib/global.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
@@ -62,17 +62,9 @@ export function switchEnvPlugin<DBA>({
       }),
     ]
 
-    config.collections = (config.collections || []).map(addAccessSettingsToUploadCollection)
-
-    const oldInit = config.onInit
-    if (oldInit) {
-      config.onInit = async (payload) => {
-        modifyUploadCollections(payload)
-        if (oldInit) {
-          await oldInit(payload)
-        }
-      }
-    }
+    config.collections = (config.collections || [])
+      .map(addAccessSettingsToUploadCollection)
+      .map(addDevelopmentSettingsToUploadCollection)
 
     config.db = getDatabaseAdapter()
 

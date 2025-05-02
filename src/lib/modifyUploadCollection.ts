@@ -4,7 +4,6 @@ import {
   type CollectionConfig,
   type CollectionSlug,
   type PayloadRequest,
-  type BasePayload,
 } from 'payload'
 import { getEnv } from './env'
 
@@ -66,7 +65,7 @@ export const addAccessSettingsToUploadCollection = (
   return collection
 }
 
-const addDevelopmentSettingsToUploadCollection = <
+export const addDevelopmentSettingsToUploadCollection = <
   T extends CollectionConfig | SanitizedCollectionConfig,
 >(
   collection: T,
@@ -86,7 +85,7 @@ const addDevelopmentSettingsToUploadCollection = <
           hooks: {
             beforeChange: [
               async ({ operation }) => {
-                if (operation === 'create') {
+                if (operation === 'create' && getEnv() === 'development') {
                   return true
                 }
               },
@@ -125,25 +124,6 @@ const removeDevelopmentSettingsFromUploadCollection = <
   return collection
 }
 
-export const modifyUploadCollections = (payload: BasePayload) => {
-  const env = getEnv()
-  payload.config.collections = Object.values(payload.config.collections || []).map((collection) => {
-    if (env === 'development') {
-      return addDevelopmentSettingsToUploadCollection(collection)
-    } else {
-      return removeDevelopmentSettingsFromUploadCollection(collection)
-    }
-  })
-
-  Object.values(payload.collections || {}).forEach((collection) => {
-    if (env === 'development') {
-      collection.config = addDevelopmentSettingsToUploadCollection(collection.config)
-    } else {
-      collection.config = removeDevelopmentSettingsFromUploadCollection(collection.config)
-    }
-  })
-}
-
 const operatingOnAnyDocumentNotCreatedDuringDevelopment = async (
   req: PayloadRequest,
   collectionSlug: CollectionSlug,
@@ -166,5 +146,8 @@ const operatingOnAnyDocumentNotCreatedDuringDevelopment = async (
       id: { in: documentIds },
     },
   })
-  return documents.docs.some((doc) => !doc.createdDuringDevelopment)
+  return documents.docs.some(
+    (doc) =>
+      typeof doc.createdDuringDevelopment !== 'boolean' || doc.createdDuringDevelopment === false,
+  )
 }
