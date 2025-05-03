@@ -54,4 +54,5 @@
       "fixable": true
     }
   ],
+  "typescript.preferences.preferTypeOnlyAutoImports": true
 }

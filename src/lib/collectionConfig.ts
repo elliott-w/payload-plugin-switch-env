@@ -4,6 +4,9 @@ import {
   type CollectionConfig,
   type CollectionSlug,
   type PayloadRequest,
+  type BasePayload,
+  type CollectionBeforeChangeHook,
+  type CollectionAfterDeleteHook,
 } from 'payload'
 import { getEnv } from './env'
 
@@ -93,35 +96,71 @@ export const addDevelopmentSettingsToUploadCollection = <
           },
         },
       ],
-      upload: {
-        ...(collection.upload === true ? {} : collection.upload),
-        disableLocalStorage: false,
-      },
     }
   }
   return collection
 }
 
-const removeDevelopmentSettingsFromUploadCollection = <
-  T extends CollectionConfig | SanitizedCollectionConfig,
->(
+export const toggleLocalStorage = <T extends SanitizedCollectionConfig>(
   collection: T,
+  enabled: boolean,
 ): T => {
-  if (collection.upload === true || typeof collection.upload === 'object') {
-    const oldFields = collection.fields || []
-    const newFields = oldFields.filter(
-      (field) => !('name' in field && field.name === 'createdDuringDevelopment'),
-    )
-    return {
-      ...collection,
-      fields: newFields,
-      upload: {
-        ...(collection.upload === true ? {} : collection.upload),
-        disableLocalStorage: true,
-      },
+  collection.upload = {
+    ...collection.upload,
+    disableLocalStorage: !enabled,
+  }
+  return collection
+}
+
+interface UploadHooks {
+  beforeChangeHook: CollectionBeforeChangeHook
+  afterDeleteHook: CollectionAfterDeleteHook
+}
+
+const hooks: Record<CollectionSlug, UploadHooks> = {}
+
+export const toggleCloudStorage = <T extends SanitizedCollectionConfig>(
+  collection: T,
+  enabled: boolean,
+): T => {
+  if (enabled) {
+    if (hooks[collection.slug]) {
+      collection.hooks.beforeChange = [
+        ...collection.hooks.beforeChange,
+        hooks[collection.slug].beforeChangeHook,
+      ]
+      collection.hooks.afterDelete = [
+        ...collection.hooks.afterDelete,
+        hooks[collection.slug].afterDeleteHook,
+      ]
+      delete hooks[collection.slug]
+    }
+  } else {
+    const beforeChangeHooks = collection.hooks.beforeChange
+    const afterDeleteHooks = collection.hooks.afterDelete
+    const beforeChangeHook = beforeChangeHooks.at(-1)
+    const afterDeleteHook = afterDeleteHooks.at(-1)
+    if (beforeChangeHook && afterDeleteHook) {
+      hooks[collection.slug] = {
+        beforeChangeHook,
+        afterDeleteHook,
+      }
+      collection.hooks.beforeChange.pop()
+      collection.hooks.afterDelete.pop()
     }
   }
   return collection
+}
+
+export const modifyUploadCollections = (payload: BasePayload) => {
+  const env = getEnv()
+  payload.config.collections
+    .filter((c) => c.upload)
+    .forEach((collection) => {
+      const production = env === 'production'
+      toggleCloudStorage(collection, production)
+      toggleLocalStorage(collection, !production)
+    })
 }
 
 const operatingOnAnyDocumentNotCreatedDuringDevelopment = async (

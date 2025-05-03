@@ -6,9 +6,11 @@ import { getEnv } from './lib/env.js'
 import {
   addAccessSettingsToUploadCollection,
   addDevelopmentSettingsToUploadCollection,
-} from './lib/modifyUploadCollection.js'
+  modifyUploadCollections,
+} from './lib/collectionConfig.js'
 import { switchEnvGlobal } from './lib/global.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
+import { getModifiedHandler } from './lib/handlers.js'
 
 export function switchEnvPlugin<DBA>({
   db,
@@ -65,6 +67,27 @@ export function switchEnvPlugin<DBA>({
     config.collections = (config.collections || [])
       .map(addAccessSettingsToUploadCollection)
       .map(addDevelopmentSettingsToUploadCollection)
+
+    const oldInit = config.onInit
+    if (oldInit) {
+      config.onInit = async (payload) => {
+        modifyUploadCollections(payload)
+        payload.config.collections
+          .filter((c) => c.upload)
+          .forEach((collection) => {
+            const handlers = collection.upload.handlers
+            if (handlers) {
+              const handler = handlers.pop()
+              if (handler) {
+                handlers.push(getModifiedHandler(handler))
+              }
+            }
+          })
+        if (oldInit) {
+          await oldInit(payload)
+        }
+      }
+    }
 
     config.db = getDatabaseAdapter()
 

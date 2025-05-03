@@ -72,7 +72,16 @@ export default buildConfig({
           type: 'text',
         },
       ],
-      upload: true,
+      upload: {
+        // adminThumbnail: ({ doc }) => {
+        //   const result = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${doc.prefix ? `${doc.prefix}/` : ''}${doc.filename}`
+        //   console.log(doc)
+        //   console.log(result)
+        //   if (typeof doc.createdDuringDevelopment !== 'boolean') {
+        //   }
+        //   return result
+        // },
+      },
     },
   ],
   secret: process.env.PAYLOAD_SECRET || 'SOME_SECRET',
