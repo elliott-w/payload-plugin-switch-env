@@ -11,6 +11,75 @@
 pnpm i @elliott-w/payload-plugin-switch-env
 ```
 
+## Config
+
+```ts
+// payload.config.ts
+import { type Args, mongooseAdapter } from '@payloadcms/db-mongodb'
+import { buildConfig } from 'payload'
+import { switchEnvPlugin, adminThumbnail } from '@elliott-w/payload-plugin-switch-env'
+import { s3Storage } from '@payloadcms/storage-s3'
+
+const dbArgs: Args = {
+  url: process.env.DATABASE_URI!,
+}
+
+export default buildConfig({
+  db: mongooseAdapter(dbArgs),
+  plugins: [
+    switchEnvPlugin({
+      db: {
+        function: mongooseAdapter,
+        productionArgs: dbArgs,
+        developmentArgs: {
+          ...dbArgs,
+          url: process.env.DEVELOPMENT_DATABASE_URI || '',
+        },
+      },
+    }),
+    // Your cloud storage plugin must come last in the plugins array
+    s3Storage({
+      bucket: process.env.S3_BUCKET!,
+      collections: {
+        media: true,
+      },
+      config: {
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+        },
+        region: process.env.S3_REGION,
+      },
+    }),
+  ],
+  collections: [
+    {
+      slug: 'media',
+      fields: [
+        {
+          name: 'alt',
+          type: 'text',
+        },
+      ],
+      upload: {
+        // Helper function if you want admin thumbnails to link directly to cloud storage
+        adminThumbnail: adminThumbnail({
+          basePath: `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com`,
+          imageSize: 'thumbnail',
+        }),
+        imageSizes: [
+          {
+            name: 'thumbnail',
+            width: 300,
+            height: 300,
+          },
+        ],
+      },
+    },
+  ],
+})
+```
+
 ## Limitations
 
 Does not support database migrations.
