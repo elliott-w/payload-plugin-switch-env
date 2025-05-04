@@ -1,9 +1,9 @@
-import type { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
-import { getEnv, setEnv } from '../env'
-import { backup, restore } from '../db/mongo'
-import { formatFileSize } from '../utils'
+import type { Endpoint, PayloadRequest } from 'payload'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
-import { modifyUploadCollections } from '../collectionConfig'
+import { backup, restore } from '../db/mongo'
+import { switchDbConnections } from '../db/switchConnections'
+import { getEnv, setEnv } from '../env'
+import { formatFileSize } from '../utils'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -20,7 +20,7 @@ export interface SwitchEndpointArgs {
 
 export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
-  path: '/switch',
+  path: '/switch-env',
   handler: async (req: PayloadRequest) => {
     const logger = req.payload.logger
     const connection = req.payload.db.connection
@@ -40,23 +40,7 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
     const newEnv = env === 'production' ? 'development' : 'production'
     setEnv(newEnv)
 
-    if (typeof req.payload.db.destroy === 'function') {
-      await req.payload.db.destroy()
-    }
-
-    modifyUploadCollections(req.payload)
-
-    const newDb = getDatabaseAdapter().init({ payload: req.payload })
-    req.payload.db = newDb as unknown as DatabaseAdapter
-    req.payload.db.payload = req.payload
-
-    if (req.payload.db.init) {
-      await req.payload.db.init()
-    }
-
-    if (req.payload.db.connect) {
-      await req.payload.db.connect()
-    }
+    await switchDbConnections(req.payload, getDatabaseAdapter)
 
     if (backupString) {
       logger.info('Restoring production database backup to local')

@@ -2,7 +2,6 @@
 import { Button, Modal, useConfig, useModal, CheckboxInput, Tooltip, toast } from '@payloadcms/ui'
 import { type FC, useEffect, useRef, useState } from 'react'
 import { useMutation } from '../../hooks/useMutation'
-import { switchEnvGlobalSlug } from '../../../lib/slugs'
 import type { Env } from '../../../lib/env'
 import './SwitchEnvButtonClient.scss'
 import { useRouter } from 'next/navigation'
@@ -39,8 +38,8 @@ export const SwitchEnvButtonClient: FC<SwitchEnvButtonClientProps> = ({ env, qui
     }
   })
 
-  const baseUrl = `${serverURL}${apiRoute}/globals/${switchEnvGlobalSlug}`
-  const { mutate } = useMutation<SwitchEndpointInput, SwitchEndpointOutput>(`${baseUrl}/switch`, {
+  const url = `${serverURL}${apiRoute}/switch-env`
+  const { mutate } = useMutation<SwitchEndpointInput, SwitchEndpointOutput>(url, {
     onSuccess: (data) => {
       if (data.success) {
         setTimeout(() => {

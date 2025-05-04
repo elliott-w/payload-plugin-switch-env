@@ -7,6 +7,8 @@ import {
   type BasePayload,
   type CollectionBeforeChangeHook,
   type CollectionAfterDeleteHook,
+  type Field,
+  flattenAllFields,
 } from 'payload'
 import { getEnv } from './env'
 
@@ -88,7 +90,7 @@ export const addDevelopmentSettingsToUploadCollection = <
           hooks: {
             beforeChange: [
               async ({ operation }) => {
-                if (operation === 'create' && getEnv() === 'development') {
+                if (operation === 'create') {
                   return true
                 }
               },
@@ -98,6 +100,41 @@ export const addDevelopmentSettingsToUploadCollection = <
       ],
     }
   }
+  return collection
+}
+
+const toggleCreatedDuringDevelopmentField = <T extends SanitizedCollectionConfig>(
+  collection: T,
+  enabled: boolean,
+): T => {
+  console.log('toggleCreatedDuringDevelopmentField', enabled)
+  const createdDuringDevelopmentField: Field = {
+    name: 'createdDuringDevelopment',
+    type: 'checkbox',
+    defaultValue: false,
+    // admin: {
+    //   hidden: true,
+    // },
+    hooks: {
+      beforeChange: [
+        async ({ operation }) => {
+          if (operation === 'create') {
+            return true
+          }
+        },
+      ],
+    },
+  }
+  let newFields = collection.fields
+  if (enabled) {
+    newFields.push(createdDuringDevelopmentField)
+  } else {
+    newFields = newFields.filter(
+      (field) => !('name' in field && field.name === 'createdDuringDevelopment'),
+    )
+  }
+  collection.fields = newFields
+  collection.flattenedFields = flattenAllFields({ fields: collection.fields })
   return collection
 }
 
@@ -160,6 +197,7 @@ export const modifyUploadCollections = (payload: BasePayload) => {
       const production = env === 'production'
       toggleCloudStorage(collection, production)
       toggleLocalStorage(collection, !production)
+      toggleCreatedDuringDevelopmentField(collection, !production)
     })
 }
 
