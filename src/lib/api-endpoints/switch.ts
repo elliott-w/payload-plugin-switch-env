@@ -20,7 +20,7 @@ export interface SwitchEndpointArgs {
 
 export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
-  path: '/switch',
+  path: '/switch-env',
   handler: async (req: PayloadRequest) => {
     const logger = req.payload.logger
     const connection = req.payload.db.connection

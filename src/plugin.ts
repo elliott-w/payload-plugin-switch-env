@@ -1,17 +1,17 @@
 // This import is required for the connection object to be typed on the payload.db object
 import type { MongooseAdapter } from '@payloadcms/db-mongodb'
 import type { Config, Plugin } from 'payload'
-import type { SwitchEnvPluginArgs } from './types.js'
-import { getEnv } from './lib/env.js'
+import { switchEndpoint } from './lib/api-endpoints/switch.js'
 import {
   addAccessSettingsToUploadCollection,
   addDevelopmentSettingsToUploadCollection,
   modifyUploadCollections,
 } from './lib/collectionConfig.js'
-import { switchEnvGlobal } from './lib/global.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
+import { getEnv } from './lib/env.js'
 import { getModifiedHandler } from './lib/handlers.js'
 import { getModifiedAdminThumbnail } from './lib/thumbnailUrl.js'
+import type { SwitchEnvPluginArgs } from './types.js'
 
 export function switchEnvPlugin<DBA>({
   db,
@@ -58,9 +58,9 @@ export function switchEnvPlugin<DBA>({
 
     const getDatabaseAdapter = getDbaFunction(db)
 
-    config.globals = [
-      ...(config.globals || []),
-      switchEnvGlobal({
+    config.endpoints = [
+      ...(config.endpoints || []),
+      switchEndpoint({
         getDatabaseAdapter,
       }),
     ]
