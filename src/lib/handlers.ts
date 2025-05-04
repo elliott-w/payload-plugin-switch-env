@@ -22,7 +22,9 @@ export const getModifiedHandler = (oldHandler: Handler) => {
       try {
         await fsPromises.stat(filePath)
         return
-      } catch {}
+      } catch {
+        req.payload.logger.warn(`File not found: ${filePath}`)
+      }
     }
     const result = await oldHandler(req, args)
     if (result instanceof Promise) {

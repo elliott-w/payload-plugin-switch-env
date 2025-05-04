@@ -2,8 +2,9 @@ import { type Args, mongooseAdapter } from '@payloadcms/db-mongodb'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
-import { switchEnvPlugin } from '@elliott-w/payload-plugin-switch-env'
+import { switchEnvPlugin, adminThumbnail } from '@elliott-w/payload-plugin-switch-env'
 import { s3Storage } from '@payloadcms/storage-s3'
+import sharp from 'sharp'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -73,14 +74,17 @@ export default buildConfig({
         },
       ],
       upload: {
-        // adminThumbnail: ({ doc }) => {
-        //   const result = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${doc.prefix ? `${doc.prefix}/` : ''}${doc.filename}`
-        //   console.log(doc)
-        //   console.log(result)
-        //   if (typeof doc.createdDuringDevelopment !== 'boolean') {
-        //   }
-        //   return result
-        // },
+        adminThumbnail: adminThumbnail({
+          basePath: `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com`,
+          imageSize: 'thumbnail',
+        }),
+        imageSizes: [
+          {
+            name: 'thumbnail',
+            width: 300,
+            height: 300,
+          },
+        ],
       },
     },
   ],
@@ -104,4 +108,5 @@ export default buildConfig({
       })
     }
   },
+  sharp,
 })

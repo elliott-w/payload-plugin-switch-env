@@ -26,7 +26,8 @@
     "next": "15.0.3",
     "payload": "3",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "sharp": "^0.34.1"
   },
   "devDependencies": {
     "copyfiles": "^2.4.1",

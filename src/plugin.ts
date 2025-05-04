@@ -11,6 +11,7 @@ import {
 import { switchEnvGlobal } from './lib/global.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
 import { getModifiedHandler } from './lib/handlers.js'
+import { getModifiedAdminThumbnail } from './lib/thumbnailUrl.js'
 
 export function switchEnvPlugin<DBA>({
   db,
@@ -81,6 +82,14 @@ export function switchEnvPlugin<DBA>({
               if (handler) {
                 handlers.push(getModifiedHandler(handler))
               }
+            }
+            const adminThumbnail = collection.upload.adminThumbnail
+            if (adminThumbnail) {
+              collection.upload.adminThumbnail = getModifiedAdminThumbnail(
+                adminThumbnail,
+                config,
+                collection,
+              )
             }
           })
         if (oldInit) {
