@@ -29,8 +29,11 @@ export default buildConfig({
     s3Storage({
       bucket: process.env.S3_BUCKET!,
       collections: {
-        media: true,
+        media: {
+          prefix: 'public',
+        },
       },
+      clientUploads: true,
       config: {
         credentials: {
           accessKeyId: process.env.S3_ACCESS_KEY_ID!,

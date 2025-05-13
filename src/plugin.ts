@@ -5,7 +5,7 @@ import { switchEndpoint } from './lib/api-endpoints/switch.js'
 import {
   addAccessSettingsToUploadCollection,
   addDevelopmentSettingsToUploadCollection,
-  modifyUploadCollections,
+  switchEnvironments,
 } from './lib/collectionConfig.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
 import { getEnv } from './lib/env.js'
@@ -13,20 +13,37 @@ import { getModifiedHandler } from './lib/handlers.js'
 import { getModifiedAdminThumbnail } from './lib/thumbnailUrl.js'
 import type { SwitchEnvPluginArgs } from './types.js'
 
+const basePath = '@elliott-w/payload-plugin-switch-env/client'
+const DangerBarPath = `${basePath}#DangerBar`
+const SwitchEnvButtonPath = `${basePath}#SwitchEnvButton`
+
 export function switchEnvPlugin<DBA>({
   db,
   enable = true,
   quickSwitch = false,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
-  return async (incomingConfig) => {
+  return async (config) => {
+    config.admin = {
+      ...(config.admin || {}),
+      dependencies: {
+        ...(config.admin?.dependencies || {}),
+        [DangerBarPath]: {
+          path: DangerBarPath,
+          type: 'component',
+        },
+        [SwitchEnvButtonPath]: {
+          path: SwitchEnvButtonPath,
+          type: 'component',
+        },
+      },
+    }
+
     if (
       !enable ||
       (typeof process.env.NODE_ENV === 'string' && process.env.NODE_ENV !== 'development')
     ) {
-      return incomingConfig
+      return config
     }
-
-    let config: Config = { ...incomingConfig }
 
     const env = getEnv()
 
@@ -41,7 +58,7 @@ export function switchEnvPlugin<DBA>({
         header: [
           ...(config.admin?.components?.header || []),
           {
-            path: '@elliott-w/payload-plugin-switch-env/client#DangerBar',
+            path: DangerBarPath,
           },
         ],
         actions: [
@@ -50,7 +67,7 @@ export function switchEnvPlugin<DBA>({
             serverProps: {
               quickSwitch,
             },
-            path: '@elliott-w/payload-plugin-switch-env/client#SwitchEnvButton',
+            path: SwitchEnvButtonPath,
           },
         ],
       },
@@ -72,7 +89,7 @@ export function switchEnvPlugin<DBA>({
     const oldInit = config.onInit
     if (oldInit) {
       config.onInit = async (payload) => {
-        modifyUploadCollections(payload)
+        switchEnvironments(payload)
         payload.config.collections
           .filter((c) => c.upload)
           .forEach((collection) => {

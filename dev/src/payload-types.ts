@@ -150,6 +150,7 @@ export interface Media {
   id: string;
   text?: string | null;
   createdDuringDevelopment?: boolean | null;
+  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -264,6 +265,7 @@ export interface PagesSelect<T extends boolean = true> {
 export interface MediaSelect<T extends boolean = true> {
   text?: T;
   createdDuringDevelopment?: T;
+  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

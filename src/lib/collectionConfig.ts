@@ -101,6 +101,9 @@ export const addDevelopmentSettingsToUploadCollection = <
   return collection
 }
 
+/**
+ * Toggles whether files get saved to local storage on upload
+ */
 export const toggleLocalStorage = <T extends SanitizedCollectionConfig>(
   collection: T,
   enabled: boolean,
@@ -119,7 +122,11 @@ interface UploadHooks {
 
 const hooks: Record<CollectionSlug, UploadHooks> = {}
 
-export const toggleCloudStorage = <T extends SanitizedCollectionConfig>(
+/**
+ * Prevents files from being uploaded (beforeChange) or deleted (afterDelete)
+ * by removing those hooks in development
+ */
+const toggleCollectionHooks = <T extends SanitizedCollectionConfig>(
   collection: T,
   enabled: boolean,
 ): T => {
@@ -152,13 +159,42 @@ export const toggleCloudStorage = <T extends SanitizedCollectionConfig>(
   return collection
 }
 
+type UploadProvider = {
+  clientProps: {
+    collectionSlug: string
+    enabled: boolean
+    prefix?: string
+    serverHandlerPath: string
+  }
+  path: string
+}
+
+/**
+ * If using clientUploads config, this will ensure that files don't
+ * get directly uploaded to cloud storage using signed urls
+ */
+export const toggleUploadProviders = (payload: BasePayload) => {
+  const env = getEnv()
+  payload.config.admin.components.providers
+    .filter((p) => typeof p === 'object' && 'serverHandlerPath' in p.clientProps)
+    .forEach((p) => {
+      const provider = p as UploadProvider
+      provider.clientProps.enabled = env === 'production'
+    })
+}
+
+export const switchEnvironments = (payload: BasePayload) => {
+  modifyUploadCollections(payload)
+  toggleUploadProviders(payload)
+}
+
 export const modifyUploadCollections = (payload: BasePayload) => {
   const env = getEnv()
   payload.config.collections
     .filter((c) => c.upload)
     .forEach((collection) => {
       const production = env === 'production'
-      toggleCloudStorage(collection, production)
+      toggleCollectionHooks(collection, production)
       toggleLocalStorage(collection, !production)
     })
 }
