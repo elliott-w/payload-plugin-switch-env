@@ -13,6 +13,9 @@ const dbArgs: Args = {
   url: process.env.PRODUCTION_MONGODB_URI!,
 }
 
+const isDev = process.env.NODE_ENV === 'development'
+const adminEmail = process.env.ADMIN_EMAIL
+
 export default buildConfig({
   db: mongooseAdapter(dbArgs),
   plugins: [
@@ -44,9 +47,8 @@ export default buildConfig({
     }),
   ],
   admin: {
-    autoLogin: {
-      email: 'dev@payloadcms.com',
-      password: 'test',
+    autoLogin: Boolean(isDev && adminEmail) && {
+      email: adminEmail,
     },
     user: 'users',
   },
