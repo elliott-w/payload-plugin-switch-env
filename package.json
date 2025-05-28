@@ -32,7 +32,6 @@
   "peerDependencies": {
     "@payloadcms/db-mongodb": ">=3.0.2",
     "@payloadcms/ui": ">=3.0.2",
-    "bson": "^6.7.0",
     "mongoose": "^8.8.1",
     "next": "^15.0.3",
     "payload": ">=3.0.2",
