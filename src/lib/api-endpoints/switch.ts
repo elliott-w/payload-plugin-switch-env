@@ -1,6 +1,6 @@
 import type { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
 import { getEnv, setEnv } from '../env'
-import { backup, restore } from '../db/mongo'
+import { backup, restore, type BackupData } from '../db/mongo'
 import { formatFileSize } from '../utils'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import { switchEnvironments } from '../collectionConfig'
@@ -16,23 +16,31 @@ export interface SwitchEndpointOutput {
 
 export interface SwitchEndpointArgs {
   getDatabaseAdapter: GetDatabaseAdapter
+  logDatabaseSize: boolean
 }
 
-export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endpoint => ({
+export const switchEndpoint = ({
+  getDatabaseAdapter,
+  logDatabaseSize,
+}: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch-env',
   handler: async (req: PayloadRequest) => {
     const logger = req.payload.logger
     const connection = req.payload.db.connection
     const env = getEnv()
-    let backupString: string | null = null
+    let backupData: BackupData | null = null
     if (env === 'production') {
       if (req.json) {
         const body = (await req.json()) as SwitchEndpointInput
         if (body.copyDatabase) {
-          backupString = await backup(connection)
-          const formattedSize = formatFileSize(Buffer.byteLength(backupString, 'utf-8'))
-          logger.info(`Created backup of production database (${formattedSize})`)
+          backupData = await backup(connection)
+          const databaseSize = logDatabaseSize
+            ? formatFileSize(JSON.stringify(backupData).length)
+            : null
+          logger.info(
+            `Created backup of production database${databaseSize ? ` (${databaseSize})` : ''}`,
+          )
         }
       }
     }
@@ -58,9 +66,9 @@ export const switchEndpoint = ({ getDatabaseAdapter }: SwitchEndpointArgs): Endp
       await req.payload.db.connect()
     }
 
-    if (backupString) {
+    if (backupData) {
       logger.info('Restoring production database backup to local')
-      await restore(req.payload.db.connection, backupString, req.payload.logger)
+      await restore(req.payload.db.connection, backupData, req.payload.logger)
     }
 
     logger.info('Switched to ' + newEnv + ' environment')

@@ -1,13 +1,17 @@
 import { type Connection } from 'mongoose'
-import { BSON } from 'bson'
 import { type BasePayload } from 'payload'
+
+export interface BackupData {
+  collections: { [collectionName: string]: any[] }
+  indexes: { [collectionName: string]: any[] }
+}
 
 /**
  * Creates a JSON string representation of all the collections in the MongoDB database.
  * @param connection - The Mongoose connection to the MongoDB database.
  * @returns A promise that resolves to a JSON string containing the backup data.
  */
-export async function backup(connection: Connection): Promise<string> {
+export async function backup(connection: Connection): Promise<BackupData> {
   const db = connection.db
   if (!db) {
     throw new Error('Could not make backup: database connection not established')
@@ -35,9 +39,7 @@ export async function backup(connection: Connection): Promise<string> {
     backupData.indexes[collectionName] = indexes
   }
 
-  // Serialize to BSON and then to base64 string
-  const bsonData = BSON.serialize(backupData)
-  return Buffer.from(bsonData).toString('base64')
+  return backupData
 }
 
 /**
@@ -47,15 +49,9 @@ export async function backup(connection: Connection): Promise<string> {
  */
 export async function restore(
   connection: Connection,
-  base64String: string,
+  backupData: BackupData,
   logger: BasePayload['logger'],
 ): Promise<void> {
-  // Deserialize from base64 string to BSON and then to object
-  const bsonData = Buffer.from(base64String, 'base64')
-  const backupData = BSON.deserialize(bsonData) as {
-    collections: { [collectionName: string]: any[] }
-    indexes: { [collectionName: string]: any[] }
-  }
   const db = connection.db
   if (!db) {
     throw new Error('Could not restore database: database connection not established')

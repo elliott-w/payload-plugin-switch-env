@@ -29,4 +29,9 @@ export interface SwitchEnvPluginArgs<DBA> {
    * @default false
    */
   quickSwitch?: QuickSwitchArgs
+  /**
+   * Log the size of the database backup in console when copying production to development
+   * @default false
+   */
+  logDatabaseSize?: boolean
 }

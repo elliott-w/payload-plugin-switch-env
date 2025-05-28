@@ -21,6 +21,7 @@ export function switchEnvPlugin<DBA>({
   db,
   enable = true,
   quickSwitch = false,
+  logDatabaseSize = false,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (config) => {
     config.admin = {
@@ -79,6 +80,7 @@ export function switchEnvPlugin<DBA>({
       ...(config.endpoints || []),
       switchEndpoint({
         getDatabaseAdapter,
+        logDatabaseSize,
       }),
     ]
 
