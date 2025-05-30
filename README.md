@@ -4,14 +4,21 @@
 
 [demo.webm](https://github.com/user-attachments/assets/37e889c0-e0e9-472c-bdce-fc7f76166100)
 
-
 ## Install
 
 ```
 pnpm i @elliott-w/payload-plugin-switch-env
 ```
 
-## Config
+## Example Config
+
+⚠️ Warning: The switchEnv plugin must come last in the plugins array. Your cloud storage plugin must be second last. <details>
+<summary>Why?</summary>
+The cloud storage plugin adds url fields to upload collections and the switchEnv plugin needs to modify the afterRead hooks on these fields.
+The cloud storage plugin also adds `beforeChange` and `afterDelete` hooks to upload collections (for uploading/deleting files from cloud storage) and the switchEnv plugin assumes they are the last hook in the array, thus you need to have the cloud storage plugin second last so that no other plugins break this assumption.
+</details>
+
+<br />
 
 ```ts
 // payload.config.ts
@@ -27,17 +34,7 @@ const dbArgs: Args = {
 export default buildConfig({
   db: mongooseAdapter(dbArgs),
   plugins: [
-    switchEnvPlugin({
-      db: {
-        function: mongooseAdapter,
-        productionArgs: dbArgs,
-        developmentArgs: {
-          ...dbArgs,
-          url: process.env.DEVELOPMENT_DATABASE_URI || '',
-        },
-      },
-    }),
-    // Your cloud storage plugin must come last in the plugins array
+    // Your cloud storage plugin must come second last in the plugins array
     s3Storage({
       bucket: process.env.S3_BUCKET!,
       collections: {
@@ -49,6 +46,17 @@ export default buildConfig({
           secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
         },
         region: process.env.S3_REGION,
+      },
+    }),
+    // The switchEnvPlugin must come last in the plugins array
+    switchEnvPlugin({
+      db: {
+        function: mongooseAdapter,
+        productionArgs: dbArgs,
+        developmentArgs: {
+          ...dbArgs,
+          url: process.env.DEVELOPMENT_DATABASE_URI || '',
+        },
       },
     }),
   ],
@@ -95,15 +103,19 @@ Only works with:
 ## Why this plugin?
 
 ### Scenario #1
+
 You're working with a production database that is getting frequently updated and you want to push a feature that requires code + database changes.
 
 #### Option #1
+
 Quickly clone the database to your local machine, make the data changes and then overwrite the production database with your local database.
 
 Pros
+
 - It works (maybe)
 
 Cons
+
 - Depending on how frequently the database (i.e. website) is updated, you might lose some data changes (e.g. e-commerce orders, form submissions, content entry changes from the client or other developers, etc) made to the production database in the time it took you to do all that.
 
 #### Option #2
@@ -120,7 +132,6 @@ Cons:
 
 - You have to train all developers on a project using this plugin to be careful when in "production environment" mode.
 
-
 ### Scenario #2
 
 You want to replicate the production environment to your development environment as quickly and simply as possible.
@@ -130,15 +141,16 @@ You want to replicate the production environment to your development environment
 Do a manual database dump and restore on your local machine. Make a copy of all the upload collection files on your local machine or in the cloud somehow.
 
 Pros
+
 - It works
 
 Cons
-- Depending on your setup, can be confusing/time consuming for new developers
 
+- Depending on your setup, can be confusing/time consuming for new developers
 
 #### Option #2
 
-Use this plugin to quickly copy your production database to local, with all the upload collection documents still referencing the files in your production cloud storage 
+Use this plugin to quickly copy your production database to local, with all the upload collection documents still referencing the files in your production cloud storage
 
 Pros
 
@@ -149,4 +161,3 @@ Pros
 Cons
 
 - The plugin does not currently work for production environments using local file storage (although it may be possible to add this as a feature in the future)
-
