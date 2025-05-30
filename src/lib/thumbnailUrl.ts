@@ -1,4 +1,4 @@
-import type { Config, GetAdminThumbnail, UploadConfig } from 'payload'
+import type { Config, FieldHook, GetAdminThumbnail, SanitizedConfig, UploadConfig } from 'payload'
 import type { CollectionConfig } from 'payload'
 
 type AdminThumbnail = UploadConfig['adminThumbnail']
@@ -51,7 +51,7 @@ const getThumbnailResult = (
 
 type GenerateURLArgs = {
   collectionSlug: string
-  config: Config
+  config: Config | SanitizedConfig
   filename?: string
 }
 
@@ -79,3 +79,36 @@ export const adminThumbnail =
     }
     return `${basePath}/${doc.prefix ? `${doc.prefix}/` : ''}${filename}`
   }
+
+export const getModifiedAfterReadHook = (afterReadHook: FieldHook): FieldHook => {
+  return async (args) => {
+    const { path, data, collection } = args
+    if (data?.createdDuringDevelopment) {
+      let size: string | undefined
+      if (path[0] === 'sizes' && typeof path[1] === 'string') {
+        size = path[1]
+      } else if (path[0] === 'thumbnailURL' && collection) {
+        const adminThumbnail = collection.upload.adminThumbnail
+        if (typeof adminThumbnail === 'string') {
+          size = adminThumbnail
+        } else {
+          // Resort to smallest size
+          size = Object.entries(data?.sizes || {})
+            .map(([size, value]) => ({
+              size,
+              value,
+            }))
+            .sort((a, b) => (a as any).value.width - (b as any).value.width)[0].size
+        }
+      }
+      const filename = size ? data?.sizes?.[size]?.filename : data?.filename
+      const url = generateURL({
+        collectionSlug: args.collection?.slug || '',
+        config: args.req.payload.config,
+        filename,
+      })
+      return url
+    }
+    return afterReadHook(args)
+  }
+}

@@ -7,8 +7,11 @@ import {
   type BasePayload,
   type CollectionBeforeChangeHook,
   type CollectionAfterDeleteHook,
+  type Field,
+  traverseFields,
 } from 'payload'
 import { getEnv } from './env'
+import { getModifiedAfterReadHook } from './thumbnailUrl'
 
 export const addAccessSettingsToUploadCollection = (
   collection: CollectionConfig,
@@ -74,28 +77,41 @@ export const addDevelopmentSettingsToUploadCollection = <
   collection: T,
 ): T => {
   if (collection.upload === true || typeof collection.upload === 'object') {
+    const fields: Field[] = [
+      ...(collection.fields || []),
+      {
+        name: 'createdDuringDevelopment',
+        type: 'checkbox',
+        defaultValue: false,
+        admin: {
+          hidden: true,
+        },
+        hooks: {
+          beforeChange: [
+            async ({ operation }) => {
+              if (operation === 'create' && getEnv() === 'development') {
+                return true
+              }
+            },
+          ],
+        },
+      },
+    ]
+    traverseFields({
+      callback: ({ field }) => {
+        if (field.type === 'text' && (field.name == 'url' || field.name == 'thumbnailURL')) {
+          const afterReadHooks = field.hooks?.afterRead
+          if (afterReadHooks && afterReadHooks.length > 0) {
+            const oldAfterReadHook = afterReadHooks.shift()!
+            afterReadHooks.unshift(getModifiedAfterReadHook(oldAfterReadHook))
+          }
+        }
+      },
+      fields,
+    })
     return {
       ...collection,
-      fields: [
-        ...(collection.fields || []),
-        {
-          name: 'createdDuringDevelopment',
-          type: 'checkbox',
-          defaultValue: false,
-          admin: {
-            hidden: true,
-          },
-          hooks: {
-            beforeChange: [
-              async ({ operation }) => {
-                if (operation === 'create' && getEnv() === 'development') {
-                  return true
-                }
-              },
-            ],
-          },
-        },
-      ],
+      fields,
     }
   }
   return collection

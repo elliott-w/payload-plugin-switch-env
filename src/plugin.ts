@@ -1,6 +1,6 @@
 // This import is required for the connection object to be typed on the payload.db object
 import type { MongooseAdapter } from '@payloadcms/db-mongodb'
-import type { Config, Plugin } from 'payload'
+import { traverseFields, type Config, type Plugin } from 'payload'
 import { switchEndpoint } from './lib/api-endpoints/switch.js'
 import {
   addAccessSettingsToUploadCollection,
@@ -10,7 +10,7 @@ import {
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
 import { getEnv } from './lib/env.js'
 import { getModifiedHandler } from './lib/handlers.js'
-import { getModifiedAdminThumbnail } from './lib/thumbnailUrl.js'
+import { getModifiedAdminThumbnail, getModifiedAfterReadHook } from './lib/thumbnailUrl.js'
 import type { SwitchEnvPluginArgs } from './types.js'
 
 const basePath = '@elliott-w/payload-plugin-switch-env/client'
@@ -95,6 +95,16 @@ export function switchEnvPlugin<DBA>({
         payload.config.collections
           .filter((c) => c.upload)
           .forEach((collection) => {
+            const thumbnailUrlField = collection.flattenedFields.find(
+              (field) => field.type === 'text' && field.name === 'thumbnailURL',
+            )
+            if (thumbnailUrlField) {
+              const afterReadHooks = thumbnailUrlField.hooks?.afterRead
+              if (afterReadHooks && afterReadHooks.length > 0) {
+                const oldAfterReadHook = afterReadHooks.shift()!
+                afterReadHooks.unshift(getModifiedAfterReadHook(oldAfterReadHook))
+              }
+            }
             const handlers = collection.upload.handlers
             if (handlers) {
               const handler = handlers.pop()

@@ -19,21 +19,16 @@ const adminEmail = process.env.ADMIN_EMAIL
 export default buildConfig({
   db: mongooseAdapter(dbArgs),
   plugins: [
-    switchEnvPlugin({
-      db: {
-        function: mongooseAdapter,
-        productionArgs: dbArgs,
-        developmentArgs: {
-          ...dbArgs,
-          url: process.env.DEVELOPMENT_MONGODB_URI || '',
-        },
-      },
-    }),
     s3Storage({
       bucket: process.env.S3_BUCKET!,
       collections: {
         media: {
           prefix: 'public',
+          disablePayloadAccessControl: true,
+          generateFileURL: ({ filename, prefix }) => {
+            const result = `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${prefix}/${filename}`
+            return result
+          },
         },
       },
       clientUploads: true,
@@ -43,6 +38,16 @@ export default buildConfig({
           secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
         },
         region: process.env.S3_REGION,
+      },
+    }),
+    switchEnvPlugin({
+      db: {
+        function: mongooseAdapter,
+        productionArgs: dbArgs,
+        developmentArgs: {
+          ...dbArgs,
+          url: process.env.DEVELOPMENT_MONGODB_URI || '',
+        },
       },
     }),
   ],
