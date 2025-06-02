@@ -50,6 +50,7 @@ export default buildConfig({
     }),
     // The switchEnvPlugin must come last in the plugins array
     switchEnvPlugin({
+      enable: process.env.NODE_ENV === 'development',
       db: {
         function: mongooseAdapter,
         productionArgs: dbArgs,
