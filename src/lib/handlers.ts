@@ -14,7 +14,7 @@ type Handler = (
 
 export const getModifiedHandler = (oldHandler: Handler, getEnv: GetEnv) => {
   const newHandler: Handler = async (req, args) => {
-    const env = await getEnv()
+    const env = await getEnv(req.payload)
     if (env === 'development') {
       const collection = req.payload.collections[args.params.collection]
       const fileDir = collection.config.upload?.staticDir || collection.config.slug

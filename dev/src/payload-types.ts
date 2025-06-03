@@ -86,8 +86,12 @@ export interface Config {
   db: {
     defaultIDType: string;
   };
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    switchEnv: SwitchEnv;
+  };
+  globalsSelect: {
+    switchEnv: SwitchEnvSelect<false> | SwitchEnvSelect<true>;
+  };
   locale: null;
   user: User & {
     collection: 'users';
@@ -323,6 +327,26 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "switchEnv".
+ */
+export interface SwitchEnv {
+  id: string;
+  env: 'development' | 'production';
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "switchEnv_select".
+ */
+export interface SwitchEnvSelect<T extends boolean = true> {
+  env?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

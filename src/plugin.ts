@@ -12,6 +12,8 @@ import { getEnv as getEnvDefault, setEnv as setEnvDefault } from './lib/env.js'
 import { getModifiedHandler } from './lib/handlers.js'
 import { getModifiedAdminThumbnail, getModifiedAfterReadHook } from './lib/thumbnailUrl.js'
 import type { SwitchEnvPluginArgs } from './types.js'
+import { switchEnvGlobal } from './globals/switchEnvGlobal.js'
+import { switchDbConnection } from './lib/db/switchDbConnection.js'
 
 const basePath = '@elliott-w/payload-plugin-switch-env/client'
 const DangerBarPath = `${basePath}#DangerBar`
@@ -46,13 +48,9 @@ export function switchEnvPlugin<DBA>({
 
     const getEnv = envCache?.getEnv ?? getEnvDefault
     const setEnv = envCache?.setEnv ?? setEnvDefault
-    const env = await getEnv()
-
-    config.cookiePrefix = `payload-${env}`
 
     config.admin = {
       ...(config.admin || {}),
-
       components: {
         views: {},
         ...(config.admin?.components || {}),
@@ -78,7 +76,9 @@ export function switchEnvPlugin<DBA>({
       },
     }
 
-    const getDatabaseAdapter = getDbaFunction(db, getEnv)
+    config.globals = [...(config.globals || []), switchEnvGlobal]
+
+    const getDatabaseAdapter = getDbaFunction(db)
 
     config.endpoints = [
       ...(config.endpoints || []),
@@ -97,6 +97,10 @@ export function switchEnvPlugin<DBA>({
     const oldInit = config.onInit
     if (oldInit) {
       config.onInit = async (payload) => {
+        const env = await getEnv(payload)
+        if (env === 'production') {
+          await switchDbConnection(payload, 'production', getDatabaseAdapter)
+        }
         switchEnvironments(payload, env)
         payload.config.collections
           .filter((c) => c.upload)
@@ -133,7 +137,7 @@ export function switchEnvPlugin<DBA>({
       }
     }
 
-    config.db = await getDatabaseAdapter()
+    config.db = getDatabaseAdapter('development')
 
     return config
   }

@@ -1,4 +1,4 @@
-import type { DatabaseAdapterObj } from 'payload'
+import type { DatabaseAdapterObj, Payload } from 'payload'
 
 interface DatabaseAdapterArgs<T> {
   function: (args: T) => DatabaseAdapterObj
@@ -7,8 +7,8 @@ interface DatabaseAdapterArgs<T> {
 }
 
 export type Env = 'production' | 'development'
-export type GetEnv = () => Env | Promise<Env>
-export type SetEnv = (env: Env) => void | Promise<void>
+export type GetEnv = (payload: Payload) => Env | Promise<Env>
+export type SetEnv = (env: Env, payload: Payload) => void | Promise<void>
 
 export type QuickSwitchArgs =
   | {
@@ -45,6 +45,7 @@ export interface SwitchEnvPluginArgs<DBA> {
    */
   envCache?: {
     getEnv: GetEnv
+    /** Gets called before and after the database connection is switched. */
     setEnv: SetEnv
   }
 }

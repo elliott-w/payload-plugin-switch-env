@@ -4,6 +4,7 @@ import { formatFileSize } from '../utils'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import { switchEnvironments } from '../collectionConfig'
 import type { GetEnv, SetEnv } from '../../types'
+import { switchDbConnection } from '../db/switchDbConnection'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -32,7 +33,7 @@ export const switchEndpoint = ({
   handler: async (req: PayloadRequest) => {
     const logger = req.payload.logger
     const connection = req.payload.db.connection
-    const env = await getEnv()
+    const env = await getEnv(req.payload)
     let backupData: BackupData | null = null
     if (env === 'production') {
       if (req.json) {
@@ -50,30 +51,19 @@ export const switchEndpoint = ({
     }
 
     const newEnv = env === 'production' ? 'development' : 'production'
-    await setEnv(newEnv)
 
-    if (typeof req.payload.db.destroy === 'function') {
-      await req.payload.db.destroy()
-    }
+    await setEnv(newEnv, req.payload)
 
-    switchEnvironments(req.payload, newEnv)
-
-    const newDb = (await getDatabaseAdapter()).init({ payload: req.payload })
-    req.payload.db = newDb as unknown as DatabaseAdapter
-    req.payload.db.payload = req.payload
-
-    if (req.payload.db.init) {
-      await req.payload.db.init()
-    }
-
-    if (req.payload.db.connect) {
-      await req.payload.db.connect()
-    }
+    await switchDbConnection(req.payload, newEnv, getDatabaseAdapter)
 
     if (backupData) {
       logger.info('Restoring production database backup to local')
       await restore(req.payload.db.connection, backupData, req.payload.logger)
     }
+
+    await setEnv(newEnv, req.payload)
+
+    switchEnvironments(req.payload, newEnv)
 
     logger.info('Switched to ' + newEnv + ' environment')
 

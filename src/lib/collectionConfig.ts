@@ -25,7 +25,7 @@ export const addAccessSettingsToUploadCollection = (
         update: async (args) => {
           const oldUpdate = collection.access?.update
           const result = oldUpdate ? await oldUpdate(args) : true
-          const env = await getEnv()
+          const env = await getEnv(args.req.payload)
           if (env === 'development') {
             if (args.data) {
               return !!args.data.createdDuringDevelopment
@@ -48,7 +48,7 @@ export const addAccessSettingsToUploadCollection = (
         delete: async (args) => {
           const oldDelete = collection.access?.delete
           const result = oldDelete ? await oldDelete(args) : true
-          const env = await getEnv()
+          const env = await getEnv(args.req.payload)
           if (env === 'development') {
             if (args.data) {
               return !!args.data.createdDuringDevelopment
@@ -92,8 +92,8 @@ export const addDevelopmentSettingsToUploadCollection = <
         },
         hooks: {
           beforeChange: [
-            async ({ operation }) => {
-              const env = await getEnv()
+            async ({ operation, req: { payload } }) => {
+              const env = await getEnv(payload)
               if (operation === 'create' && env === 'development') {
                 return true
               }

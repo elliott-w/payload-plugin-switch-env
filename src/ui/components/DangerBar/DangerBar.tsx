@@ -2,13 +2,15 @@ import { FC } from 'react'
 import './DangerBar.scss'
 import { WarningIcon } from '../SwitchEnvButtonClient/icons'
 import type { GetEnv } from '../../../types'
+import type { Payload } from 'payload'
 
 export interface DangerBarProps {
+  payload: Payload
   getEnv: GetEnv
 }
 
-export const DangerBar: FC<DangerBarProps> = async ({ getEnv }) => {
-  const env = await getEnv()
+export const DangerBar: FC<DangerBarProps> = async ({ payload, getEnv }) => {
+  const env = await getEnv(payload)
   if (env === 'development') {
     return null
   }
