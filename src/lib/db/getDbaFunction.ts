@@ -1,10 +1,10 @@
-import { type SwitchEnvPluginArgs } from '../../types'
-import { getEnv } from '../env'
+import { type GetEnv, type SwitchEnvPluginArgs } from '../../types'
 
 export const getDbaFunction =
-  <DBA>(dbConfig: SwitchEnvPluginArgs<DBA>['db']) =>
-  () => {
-    const isProduction = getEnv() === 'production'
+  <DBA>(dbConfig: SwitchEnvPluginArgs<DBA>['db'], getEnv: GetEnv) =>
+  async () => {
+    const env = await getEnv()
+    const isProduction = env === 'production'
     const dbaResult = dbConfig.function(
       isProduction ? dbConfig.productionArgs : dbConfig.developmentArgs,
     )

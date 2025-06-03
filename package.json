@@ -1,6 +1,6 @@
 {
   "name": "@elliott-w/payload-plugin-switch-env",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "homepage:": "https://github.com/elliott-w/payload-plugin-switch-env",
   "description": "Payload plugin to switch environments",
   "author": "Elliott Wagener",

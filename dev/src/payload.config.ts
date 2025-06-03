@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url'
 import { switchEnvPlugin, adminThumbnail } from '@elliott-w/payload-plugin-switch-env'
 import { s3Storage } from '@payloadcms/storage-s3'
 import sharp from 'sharp'
+import { envCache } from './envCache'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -49,6 +50,7 @@ export default buildConfig({
           url: process.env.DEVELOPMENT_MONGODB_URI || '',
         },
       },
+      envCache,
     }),
   ],
   admin: {

@@ -1,9 +1,9 @@
 import type { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
-import { getEnv, setEnv } from '../env'
 import { backup, restore, type BackupData } from '../db/mongo'
 import { formatFileSize } from '../utils'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import { switchEnvironments } from '../collectionConfig'
+import type { GetEnv, SetEnv } from '../../types'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -17,18 +17,22 @@ export interface SwitchEndpointOutput {
 export interface SwitchEndpointArgs {
   getDatabaseAdapter: GetDatabaseAdapter
   logDatabaseSize: boolean
+  getEnv: GetEnv
+  setEnv: SetEnv
 }
 
 export const switchEndpoint = ({
   getDatabaseAdapter,
   logDatabaseSize,
+  getEnv,
+  setEnv,
 }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch-env',
   handler: async (req: PayloadRequest) => {
     const logger = req.payload.logger
     const connection = req.payload.db.connection
-    const env = getEnv()
+    const env = await getEnv()
     let backupData: BackupData | null = null
     if (env === 'production') {
       if (req.json) {
@@ -46,15 +50,15 @@ export const switchEndpoint = ({
     }
 
     const newEnv = env === 'production' ? 'development' : 'production'
-    setEnv(newEnv)
+    await setEnv(newEnv)
 
     if (typeof req.payload.db.destroy === 'function') {
       await req.payload.db.destroy()
     }
 
-    switchEnvironments(req.payload)
+    switchEnvironments(req.payload, newEnv)
 
-    const newDb = getDatabaseAdapter().init({ payload: req.payload })
+    const newDb = (await getDatabaseAdapter()).init({ payload: req.payload })
     req.payload.db = newDb as unknown as DatabaseAdapter
     req.payload.db.payload = req.payload
 

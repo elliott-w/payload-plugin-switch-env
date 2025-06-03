@@ -2,7 +2,7 @@ import path from 'path'
 import type { TypeWithID } from 'payload'
 import type { PayloadRequest } from 'payload'
 import fsPromises from 'fs/promises'
-import { getEnv } from './env'
+import type { GetEnv } from '../types'
 
 type Handler = (
   req: PayloadRequest,
@@ -12,9 +12,9 @@ type Handler = (
   },
 ) => Promise<Response> | Promise<void> | Response | void
 
-export const getModifiedHandler = (oldHandler: Handler) => {
+export const getModifiedHandler = (oldHandler: Handler, getEnv: GetEnv) => {
   const newHandler: Handler = async (req, args) => {
-    const env = getEnv()
+    const env = await getEnv()
     if (env === 'development') {
       const collection = req.payload.collections[args.params.collection]
       const fileDir = collection.config.upload?.staticDir || collection.config.slug

@@ -1,6 +1,6 @@
 // This import is required for the connection object to be typed on the payload.db object
 import type { MongooseAdapter } from '@payloadcms/db-mongodb'
-import { traverseFields, type Config, type Plugin } from 'payload'
+import { type Plugin } from 'payload'
 import { switchEndpoint } from './lib/api-endpoints/switch.js'
 import {
   addAccessSettingsToUploadCollection,
@@ -8,7 +8,7 @@ import {
   switchEnvironments,
 } from './lib/collectionConfig.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
-import { getEnv } from './lib/env.js'
+import { getEnv as getEnvDefault, setEnv as setEnvDefault } from './lib/env.js'
 import { getModifiedHandler } from './lib/handlers.js'
 import { getModifiedAdminThumbnail, getModifiedAfterReadHook } from './lib/thumbnailUrl.js'
 import type { SwitchEnvPluginArgs } from './types.js'
@@ -22,6 +22,7 @@ export function switchEnvPlugin<DBA>({
   enable = true,
   quickSwitch = false,
   logDatabaseSize = false,
+  envCache,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (config) => {
     config.admin = {
@@ -43,7 +44,9 @@ export function switchEnvPlugin<DBA>({
       return config
     }
 
-    const env = getEnv()
+    const getEnv = envCache?.getEnv ?? getEnvDefault
+    const setEnv = envCache?.setEnv ?? setEnvDefault
+    const env = await getEnv()
 
     config.cookiePrefix = `payload-${env}`
 
@@ -57,6 +60,9 @@ export function switchEnvPlugin<DBA>({
           ...(config.admin?.components?.header || []),
           {
             path: DangerBarPath,
+            serverProps: {
+              getEnv,
+            },
           },
         ],
         actions: [
@@ -64,6 +70,7 @@ export function switchEnvPlugin<DBA>({
           {
             serverProps: {
               quickSwitch,
+              getEnv,
             },
             path: SwitchEnvButtonPath,
           },
@@ -71,24 +78,26 @@ export function switchEnvPlugin<DBA>({
       },
     }
 
-    const getDatabaseAdapter = getDbaFunction(db)
+    const getDatabaseAdapter = getDbaFunction(db, getEnv)
 
     config.endpoints = [
       ...(config.endpoints || []),
       switchEndpoint({
         getDatabaseAdapter,
         logDatabaseSize,
+        getEnv,
+        setEnv,
       }),
     ]
 
     config.collections = (config.collections || [])
-      .map(addAccessSettingsToUploadCollection)
-      .map(addDevelopmentSettingsToUploadCollection)
+      .map((collection) => addAccessSettingsToUploadCollection(collection, getEnv))
+      .map((collection) => addDevelopmentSettingsToUploadCollection(collection, getEnv))
 
     const oldInit = config.onInit
     if (oldInit) {
       config.onInit = async (payload) => {
-        switchEnvironments(payload)
+        switchEnvironments(payload, env)
         payload.config.collections
           .filter((c) => c.upload)
           .forEach((collection) => {
@@ -106,7 +115,7 @@ export function switchEnvPlugin<DBA>({
             if (handlers) {
               const handler = handlers.pop()
               if (handler) {
-                handlers.push(getModifiedHandler(handler))
+                handlers.push(getModifiedHandler(handler, getEnv))
               }
             }
             const adminThumbnail = collection.upload.adminThumbnail
@@ -124,7 +133,7 @@ export function switchEnvPlugin<DBA>({
       }
     }
 
-    config.db = getDatabaseAdapter()
+    config.db = await getDatabaseAdapter()
 
     return config
   }

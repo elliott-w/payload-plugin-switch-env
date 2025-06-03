@@ -2,12 +2,11 @@
 import { Button, Modal, useConfig, useModal, CheckboxInput, Tooltip, toast } from '@payloadcms/ui'
 import { type FC, useEffect, useRef, useState } from 'react'
 import { useMutation } from '../../hooks/useMutation'
-import type { Env } from '../../../lib/env'
 import './SwitchEnvButtonClient.scss'
 import { useRouter } from 'next/navigation'
 import type { SwitchEndpointInput, SwitchEndpointOutput } from '../../../lib/api-endpoints/switch'
 import { InfoIcon, LoadingSpinnerIcon, SwitchIcon } from './icons'
-import type { QuickSwitchArgs } from '../../../types'
+import type { Env, QuickSwitchArgs } from '../../../types'
 
 const baseClass = 'switch-env'
 

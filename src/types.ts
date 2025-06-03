@@ -6,6 +6,10 @@ interface DatabaseAdapterArgs<T> {
   developmentArgs: T
 }
 
+export type Env = 'production' | 'development'
+export type GetEnv = () => Env | Promise<Env>
+export type SetEnv = (env: Env) => void | Promise<void>
+
 export type QuickSwitchArgs =
   | {
       /**
@@ -30,8 +34,17 @@ export interface SwitchEnvPluginArgs<DBA> {
    */
   quickSwitch?: QuickSwitchArgs
   /**
-   * Log the size of the database backup in console when copying production to development
+   * Log the size of the database backup in console when copying production to development.
+   * Incurs a performance penalty for serialization of the database to a string.
    * @default false
    */
   logDatabaseSize?: boolean
+  /**
+   * Optionally override the get and set method for the current environment.
+   * @default undefined
+   */
+  envCache?: {
+    getEnv: GetEnv
+    setEnv: SetEnv
+  }
 }

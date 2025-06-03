@@ -10,11 +10,12 @@ import {
   type Field,
   traverseFields,
 } from 'payload'
-import { getEnv } from './env'
 import { getModifiedAfterReadHook } from './thumbnailUrl'
+import type { Env, GetEnv } from '../types'
 
 export const addAccessSettingsToUploadCollection = (
   collection: CollectionConfig,
+  getEnv: GetEnv,
 ): CollectionConfig => {
   if (collection.upload === true || typeof collection.upload === 'object') {
     return {
@@ -24,7 +25,8 @@ export const addAccessSettingsToUploadCollection = (
         update: async (args) => {
           const oldUpdate = collection.access?.update
           const result = oldUpdate ? await oldUpdate(args) : true
-          if (getEnv() === 'development') {
+          const env = await getEnv()
+          if (env === 'development') {
             if (args.data) {
               return !!args.data.createdDuringDevelopment
             } else {
@@ -46,7 +48,8 @@ export const addAccessSettingsToUploadCollection = (
         delete: async (args) => {
           const oldDelete = collection.access?.delete
           const result = oldDelete ? await oldDelete(args) : true
-          if (getEnv() === 'development') {
+          const env = await getEnv()
+          if (env === 'development') {
             if (args.data) {
               return !!args.data.createdDuringDevelopment
             } else {
@@ -75,6 +78,7 @@ export const addDevelopmentSettingsToUploadCollection = <
   T extends CollectionConfig | SanitizedCollectionConfig,
 >(
   collection: T,
+  getEnv: GetEnv,
 ): T => {
   if (collection.upload === true || typeof collection.upload === 'object') {
     const fields: Field[] = [
@@ -89,7 +93,8 @@ export const addDevelopmentSettingsToUploadCollection = <
         hooks: {
           beforeChange: [
             async ({ operation }) => {
-              if (operation === 'create' && getEnv() === 'development') {
+              const env = await getEnv()
+              if (operation === 'create' && env === 'development') {
                 return true
               }
             },
@@ -189,8 +194,7 @@ type UploadProvider = {
  * If using clientUploads config, this will ensure that files don't
  * get directly uploaded to cloud storage using signed urls
  */
-export const toggleUploadProviders = (payload: BasePayload) => {
-  const env = getEnv()
+export const toggleUploadProviders = (payload: BasePayload, env: Env) => {
   payload.config.admin.components.providers
     .filter((p) => typeof p === 'object' && 'serverHandlerPath' in p.clientProps)
     .forEach((p) => {
@@ -199,13 +203,12 @@ export const toggleUploadProviders = (payload: BasePayload) => {
     })
 }
 
-export const switchEnvironments = (payload: BasePayload) => {
-  modifyUploadCollections(payload)
-  toggleUploadProviders(payload)
+export const switchEnvironments = (payload: BasePayload, env: Env) => {
+  modifyUploadCollections(payload, env)
+  toggleUploadProviders(payload, env)
 }
 
-export const modifyUploadCollections = (payload: BasePayload) => {
-  const env = getEnv()
+export const modifyUploadCollections = (payload: BasePayload, env: Env) => {
   payload.config.collections
     .filter((c) => c.upload)
     .forEach((collection) => {

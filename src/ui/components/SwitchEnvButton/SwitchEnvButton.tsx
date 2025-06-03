@@ -1,14 +1,14 @@
 import type { FC } from 'react'
 import { SwitchEnvButtonClient } from '../SwitchEnvButtonClient/SwitchEnvButtonClient'
-import { getEnv } from '../../../lib/env'
-import type { QuickSwitchArgs } from '../../../types'
+import type { GetEnv, QuickSwitchArgs } from '../../../types'
 
 export type SwitchEnvButtonProps = {
   quickSwitch: QuickSwitchArgs
+  getEnv: GetEnv
 }
 
-export const SwitchEnvButton: FC<SwitchEnvButtonProps> = async ({ quickSwitch }) => {
-  const env = getEnv()
+export const SwitchEnvButton: FC<SwitchEnvButtonProps> = async ({ quickSwitch, getEnv }) => {
+  const env = await getEnv()
   return <SwitchEnvButtonClient env={env} quickSwitch={quickSwitch} />
 }
 
