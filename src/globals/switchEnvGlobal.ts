@@ -4,6 +4,9 @@ export const switchEnvGlobalSlug = 'switchEnv'
 
 export const switchEnvGlobal: GlobalConfig = {
   slug: switchEnvGlobalSlug,
+  admin: {
+    hidden: true,
+  },
   fields: [
     {
       name: 'env',

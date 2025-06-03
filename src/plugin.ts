@@ -97,6 +97,7 @@ export function switchEnvPlugin<DBA>({
     const oldInit = config.onInit
     if (oldInit) {
       config.onInit = async (payload) => {
+        payload.logger.debug('onInit')
         const env = await getEnv(payload)
         if (env === 'production') {
           await switchDbConnection(payload, 'production', getDatabaseAdapter)
