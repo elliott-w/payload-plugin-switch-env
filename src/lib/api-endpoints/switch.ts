@@ -65,11 +65,12 @@ export const switchEndpoint = ({
 
     const serverUrl = getServerUrl(req)
     const isDev = process.env.NODE_ENV === 'development'
-
     if (!isDev) {
-      await fetch(
-        `${serverUrl}/admin/switch-db-connection?env=${newEnv}&secret=${req.payload.config.secret}`,
-      )
+      const searchParams = new URLSearchParams()
+      searchParams.set('env', newEnv)
+      searchParams.set('secret', req.payload.config.secret)
+      const adminRoute = req.payload.config.routes.admin
+      await fetch(`${serverUrl}${adminRoute}/switch-db-connection?${searchParams.toString()}`)
     }
 
     switchEnvironments(req.payload, newEnv)
