@@ -18,6 +18,7 @@ import { switchDbConnection } from './lib/db/switchDbConnection.js'
 const basePath = '@elliott-w/payload-plugin-switch-env/client'
 const DangerBarPath = `${basePath}#DangerBar`
 const SwitchEnvButtonPath = `${basePath}#SwitchEnvButton`
+const SwitchDbConnectionViewPath = `${basePath}#SwitchDbConnectionView`
 
 export function switchEnvPlugin<DBA>({
   db,
@@ -39,6 +40,10 @@ export function switchEnvPlugin<DBA>({
           path: SwitchEnvButtonPath,
           type: 'component',
         },
+        [SwitchDbConnectionViewPath]: {
+          path: SwitchDbConnectionViewPath,
+          type: 'component',
+        },
       },
     }
 
@@ -48,12 +53,24 @@ export function switchEnvPlugin<DBA>({
 
     const getEnv = envCache?.getEnv ?? getEnvDefault
     const setEnv = envCache?.setEnv ?? setEnvDefault
+    const getDatabaseAdapter = getDbaFunction(db)
 
     config.admin = {
       ...(config.admin || {}),
       components: {
-        views: {},
         ...(config.admin?.components || {}),
+        views: {
+          ...(config.admin?.components?.views || {}),
+          SwitchDbConnectionView: {
+            Component: {
+              path: SwitchDbConnectionViewPath,
+              serverProps: {
+                getDatabaseAdapter,
+              },
+            },
+            path: '/switch-db-connection',
+          },
+        },
         header: [
           ...(config.admin?.components?.header || []),
           {
@@ -77,8 +94,6 @@ export function switchEnvPlugin<DBA>({
     }
 
     config.globals = [...(config.globals || []), switchEnvGlobal]
-
-    const getDatabaseAdapter = getDbaFunction(db)
 
     config.endpoints = [
       ...(config.endpoints || []),

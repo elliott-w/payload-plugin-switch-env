@@ -1,3 +1,5 @@
+import type { PayloadRequest } from 'payload'
+
 export const formatFileSize = (bytes: number): string => {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let size = bytes
@@ -9,4 +11,12 @@ export const formatFileSize = (bytes: number): string => {
   }
 
   return `${size.toFixed(2)} ${units[unitIndex]}`
+}
+
+export const getServerUrl = (req: PayloadRequest) => {
+  const host = req.headers.get('host')
+  const forwardedProto = req.headers.get('x-forwarded-proto')
+  const scheme = forwardedProto || (process.env.NODE_ENV === 'production' ? 'https' : 'http')
+  const serverUrl = `${scheme}://${host}`
+  return serverUrl
 }

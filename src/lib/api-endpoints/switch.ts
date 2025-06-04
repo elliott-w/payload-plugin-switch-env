@@ -1,6 +1,6 @@
-import type { DatabaseAdapter, Endpoint, PayloadRequest } from 'payload'
+import type { Endpoint, PayloadRequest } from 'payload'
 import { backup, restore, type BackupData } from '../db/mongo'
-import { formatFileSize } from '../utils'
+import { formatFileSize, getServerUrl } from '../utils'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import { switchEnvironments } from '../collectionConfig'
 import type { GetEnv, SetEnv } from '../../types'
@@ -62,6 +62,15 @@ export const switchEndpoint = ({
     }
 
     await setEnv(newEnv, req.payload)
+
+    const serverUrl = getServerUrl(req)
+    const isDev = process.env.NODE_ENV === 'development'
+
+    if (isDev) {
+      await fetch(
+        `${serverUrl}/admin/switch-db-connection?env=${newEnv}&secret=${req.payload.config.secret}`,
+      )
+    }
 
     switchEnvironments(req.payload, newEnv)
 
