@@ -66,7 +66,7 @@ export const switchEndpoint = ({
     const serverUrl = getServerUrl(req)
     const isDev = process.env.NODE_ENV === 'development'
 
-    if (isDev) {
+    if (!isDev) {
       await fetch(
         `${serverUrl}/admin/switch-db-connection?env=${newEnv}&secret=${req.payload.config.secret}`,
       )
