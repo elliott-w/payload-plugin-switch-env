@@ -31,9 +31,10 @@ export const switchEndpoint = ({
   method: 'post',
   path: '/switch-env',
   handler: async (req: PayloadRequest) => {
-    const logger = req.payload.logger
-    const connection = req.payload.db.connection
-    const env = await getEnv(req.payload)
+    const payload = req.payload
+    const logger = payload.logger
+    const connection = payload.db.connection
+    const env = await getEnv(payload)
     let backupData: BackupData | null = null
     if (env === 'production') {
       if (req.json) {
@@ -52,28 +53,33 @@ export const switchEndpoint = ({
 
     const newEnv = env === 'production' ? 'development' : 'production'
 
-    await setEnv(newEnv, req.payload)
+    if (env === 'development') {
+      await setEnv(newEnv, payload)
+    }
 
-    await switchDbConnection(req.payload, newEnv, getDatabaseAdapter)
+    await switchDbConnection(payload, newEnv, getDatabaseAdapter)
 
     if (backupData) {
       logger.info('Restoring production database backup to local')
-      await restore(req.payload.db.connection, backupData, req.payload.logger)
+      await restore(payload.db.connection, backupData, payload.logger)
     }
 
-    await setEnv(newEnv, req.payload)
+    if (newEnv === 'development') {
+      await setEnv(newEnv, payload)
+    }
 
-    const serverUrl = getServerUrl(req)
     const isDev = process.env.NODE_ENV === 'development'
     if (!isDev) {
+      const serverUrl = getServerUrl(req)
+      const adminRoute = payload.config.routes.admin
       const searchParams = new URLSearchParams()
       searchParams.set('env', newEnv)
-      searchParams.set('secret', req.payload.config.secret)
-      const adminRoute = req.payload.config.routes.admin
-      await fetch(`${serverUrl}${adminRoute}/switch-db-connection?${searchParams.toString()}`)
+      searchParams.set('secret', payload.config.secret)
+      const queryString = searchParams.toString()
+      await fetch(`${serverUrl}${adminRoute}/switch-db-connection?${queryString}`)
     }
 
-    switchEnvironments(req.payload, newEnv)
+    switchEnvironments(payload, newEnv)
 
     logger.info('Switched to ' + newEnv + ' environment')
 

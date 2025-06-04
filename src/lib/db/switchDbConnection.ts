@@ -7,7 +7,7 @@ export const switchDbConnection = async (
   newEnv: Env,
   getDatabaseAdapter: GetDatabaseAdapter,
 ) => {
-  payload.logger.debug(`Old database name: ${payload.db.connection.name}`)
+  const oldDatabaseName = payload.db.connection.name
 
   if (typeof payload.db.destroy === 'function') {
     await payload.db.destroy()
@@ -25,5 +25,7 @@ export const switchDbConnection = async (
     await payload.db.connect()
   }
 
-  payload.logger.debug(`New database name: ${payload.db.connection.name}`)
+  const newDatabaseName = payload.db.connection.name
+
+  payload.logger.debug(`Switched from ${oldDatabaseName} to ${newDatabaseName}`)
 }

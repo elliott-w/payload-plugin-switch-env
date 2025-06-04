@@ -45,7 +45,7 @@ export interface SwitchEnvPluginArgs<DBA> {
    */
   envCache?: {
     getEnv: GetEnv
-    /** Gets called before and after the database connection is switched. */
+    /** Only gets called when connected to the development database. */
     setEnv: SetEnv
   }
 }
