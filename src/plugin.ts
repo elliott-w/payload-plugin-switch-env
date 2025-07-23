@@ -5,29 +5,33 @@ import { switchEndpoint } from './lib/api-endpoints/switch.js'
 import {
   addAccessSettingsToUploadCollection,
   addDevelopmentSettingsToUploadCollection,
+  modifyThumbnailUrl,
   switchEnvironments,
 } from './lib/collectionConfig.js'
 import { getDbaFunction } from './lib/db/getDbaFunction.js'
-import { getEnv as getEnvDefault, setEnv as setEnvDefault } from './lib/env.js'
-import { getModifiedHandler } from './lib/handlers.js'
-import { getModifiedAdminThumbnail, getModifiedAfterReadHook } from './lib/thumbnailUrl.js'
+import { getEnv, setEnv } from './lib/env.js'
 import type { SwitchEnvPluginArgs } from './types.js'
 import { switchEnvGlobal } from './globals/switchEnvGlobal.js'
 import { switchDbConnection } from './lib/db/switchDbConnection.js'
+import { copyEndpoint } from './lib/api-endpoints/copy.js'
 
 const basePath = '@elliott-w/payload-plugin-switch-env/client'
 const DangerBarPath = `${basePath}#DangerBar`
-const SwitchEnvButtonPath = `${basePath}#SwitchEnvButton`
+const AdminButtonPath = `${basePath}#AdminButton`
 const SwitchDbConnectionViewPath = `${basePath}#SwitchDbConnectionView`
 
 export function switchEnvPlugin<DBA>({
+  buttonMode = 'switch',
   db,
+  developmentFileStorage = {
+    mode: 'file-system',
+  },
   enable = true,
   quickSwitch = false,
   logDatabaseSize = false,
-  envCache,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (config) => {
+    const developmentFileStorageMode = developmentFileStorage.mode
     config.admin = {
       ...(config.admin || {}),
       dependencies: {
@@ -36,8 +40,8 @@ export function switchEnvPlugin<DBA>({
           path: DangerBarPath,
           type: 'component',
         },
-        [SwitchEnvButtonPath]: {
-          path: SwitchEnvButtonPath,
+        [AdminButtonPath]: {
+          path: AdminButtonPath,
           type: 'component',
         },
         [SwitchDbConnectionViewPath]: {
@@ -51,8 +55,6 @@ export function switchEnvPlugin<DBA>({
       return config
     }
 
-    const getEnv = envCache?.getEnv ?? getEnvDefault
-    const setEnv = envCache?.setEnv ?? setEnvDefault
     const getDatabaseAdapter = getDbaFunction(db)
 
     config.admin = {
@@ -86,8 +88,9 @@ export function switchEnvPlugin<DBA>({
             serverProps: {
               quickSwitch,
               getEnv,
+              mode: buttonMode,
             },
-            path: SwitchEnvButtonPath,
+            path: AdminButtonPath,
           },
         ],
       },
@@ -102,57 +105,49 @@ export function switchEnvPlugin<DBA>({
         logDatabaseSize,
         getEnv,
         setEnv,
+        developmentFileStorage,
+      }),
+      copyEndpoint({
+        getDatabaseAdapter,
+        logDatabaseSize,
+        getEnv,
       }),
     ]
 
     config.collections = (config.collections || [])
       .map((collection) => addAccessSettingsToUploadCollection(collection, getEnv))
-      .map((collection) => addDevelopmentSettingsToUploadCollection(collection, getEnv))
+      .map((collection) =>
+        addDevelopmentSettingsToUploadCollection(collection, getEnv, developmentFileStorage),
+      )
+
+    if (developmentFileStorageMode === 'file-system') {
+      modifyThumbnailUrl(config, getEnv)
+    }
+    const env = await getEnv()
+    switchEnvironments(config, env, developmentFileStorage)
 
     const oldInit = config.onInit
-    if (oldInit) {
-      config.onInit = async (payload) => {
-        const env = await getEnv(payload)
-        if (env === 'production') {
+    config.onInit = async (payload) => {
+      // We can't access the payload object (and thus the database) until init
+      // So we check the database to see if we're in production or development
+      // because the serverless funtion may have been destroyed (along with memory
+      // and filesystem)
+      const env = await getEnv(payload)
+      if (env === 'production') {
+        if (buttonMode === 'switch') {
+          switchEnvironments(config, 'production', developmentFileStorage)
           await switchDbConnection(payload, 'production', getDatabaseAdapter)
+        } else {
+          // We never want to be in production env when using the 'copy' buttonMode
+          await setEnv('development', payload)
         }
-        switchEnvironments(payload, env)
-        payload.config.collections
-          .filter((c) => c.upload)
-          .forEach((collection) => {
-            const thumbnailUrlField = collection.flattenedFields.find(
-              (field) => field.type === 'text' && field.name === 'thumbnailURL',
-            )
-            if (thumbnailUrlField) {
-              const afterReadHooks = thumbnailUrlField.hooks?.afterRead
-              if (afterReadHooks && afterReadHooks.length > 0) {
-                const oldAfterReadHook = afterReadHooks.shift()!
-                afterReadHooks.unshift(getModifiedAfterReadHook(oldAfterReadHook))
-              }
-            }
-            const handlers = collection.upload.handlers
-            if (handlers) {
-              const handler = handlers.pop()
-              if (handler) {
-                handlers.push(getModifiedHandler(handler, getEnv))
-              }
-            }
-            const adminThumbnail = collection.upload.adminThumbnail
-            if (adminThumbnail) {
-              collection.upload.adminThumbnail = getModifiedAdminThumbnail(
-                adminThumbnail,
-                config,
-                collection,
-              )
-            }
-          })
-        if (oldInit) {
-          await oldInit(payload)
-        }
+      }
+      if (oldInit) {
+        await oldInit(payload)
       }
     }
 
-    config.db = getDatabaseAdapter('development')
+    config.db = getDatabaseAdapter(env)
 
     return config
   }

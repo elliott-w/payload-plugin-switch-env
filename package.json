@@ -1,6 +1,6 @@
 {
   "name": "@elliott-w/payload-plugin-switch-env",
-  "version": "1.4.5",
+  "version": "1.5.0",
   "homepage:": "https://github.com/elliott-w/payload-plugin-switch-env",
   "description": "Payload plugin to switch environments",
   "author": "Elliott Wagener",
@@ -31,6 +31,7 @@
   },
   "peerDependencies": {
     "@payloadcms/db-mongodb": ">=3.0.2",
+    "@payloadcms/plugin-cloud-storage": ">=3.0.2",
     "@payloadcms/ui": ">=3.0.2",
     "mongoose": "^8.8.1",
     "next": "^15.0.3",
@@ -41,19 +42,13 @@
   "devDependencies": {
     "@payloadcms/eslint-config": "^3.0.0",
     "@types/node": "22.7.5",
-    "@types/react": "npm:types-react@19.0.0-rc.1",
-    "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1",
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.2",
     "copyfiles": "^2.4.1",
     "next": "15.0.3",
     "payload": ">=3.0.2",
     "rimraf": "^6.0.1",
     "typescript": "5.5.3"
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "npm:types-react@19.0.0-rc.1",
-      "@types/react-dom": "npm:types-react-dom@19.0.0-rc.1"
-    }
   },
   "publishConfig": {
     "main": "./dist/index.js",

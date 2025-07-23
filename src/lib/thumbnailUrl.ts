@@ -1,12 +1,19 @@
-import type { Config, FieldHook, GetAdminThumbnail, SanitizedConfig, UploadConfig } from 'payload'
+import type {
+  Config,
+  FieldHook,
+  GetAdminThumbnail,
+  SanitizedCollectionConfig,
+  SanitizedConfig,
+  UploadConfig,
+} from 'payload'
 import type { CollectionConfig } from 'payload'
 
 type AdminThumbnail = UploadConfig['adminThumbnail']
 
 export const getModifiedAdminThumbnail = (
   originalAdminThumbnail: AdminThumbnail,
-  config: Config,
-  collection: CollectionConfig,
+  config: Config | SanitizedConfig,
+  collection: CollectionConfig | SanitizedCollectionConfig,
 ): AdminThumbnail => {
   const getAdminThumbnail: GetAdminThumbnail = (args) => {
     const doc = args.doc
@@ -25,8 +32,8 @@ export const getModifiedAdminThumbnail = (
 }
 
 const getThumbnailResult = (
-  config: Config,
-  collection: CollectionConfig,
+  config: Config | SanitizedConfig,
+  collection: CollectionConfig | SanitizedCollectionConfig,
   adminThumbnail: AdminThumbnail,
   args: Parameters<GetAdminThumbnail>[0],
 ) => {
@@ -57,7 +64,9 @@ type GenerateURLArgs = {
 
 const generateURL = ({ collectionSlug, config, filename }: GenerateURLArgs) => {
   if (filename) {
-    return `${config.serverURL || ''}${config.routes?.api || ''}/${collectionSlug}/file/${encodeURIComponent(filename)}`
+    return `${config.serverURL || ''}${
+      config.routes?.api || ''
+    }/${collectionSlug}/file/${encodeURIComponent(filename)}`
   }
   return undefined
 }

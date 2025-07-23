@@ -3,7 +3,12 @@ import { backup, restore, type BackupData } from '../db/mongo'
 import { formatFileSize, getServerUrl } from '../utils'
 import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import { switchEnvironments } from '../collectionConfig'
-import type { GetEnv, SetEnv } from '../../types'
+import type {
+  DevelopmentFileStorageArgs,
+  DevelopmentFileStorageMode,
+  GetEnv,
+  SetEnv,
+} from '../../types'
 import { switchDbConnection } from '../db/switchDbConnection'
 
 export interface SwitchEndpointInput {
@@ -20,6 +25,7 @@ export interface SwitchEndpointArgs {
   logDatabaseSize: boolean
   getEnv: GetEnv
   setEnv: SetEnv
+  developmentFileStorage: DevelopmentFileStorageArgs
 }
 
 export const switchEndpoint = ({
@@ -27,6 +33,7 @@ export const switchEndpoint = ({
   logDatabaseSize,
   getEnv,
   setEnv,
+  developmentFileStorage,
 }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch-env',
@@ -79,7 +86,7 @@ export const switchEndpoint = ({
       await fetch(`${serverUrl}${adminRoute}/switch-db-connection?${queryString}`)
     }
 
-    switchEnvironments(payload, newEnv)
+    switchEnvironments(payload.config, newEnv, developmentFileStorage)
 
     logger.info('Switched to ' + newEnv + ' environment')
 

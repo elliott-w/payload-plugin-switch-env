@@ -1,5 +1,10 @@
+import { existsSync, readFileSync, writeFileSync } from 'fs'
+import path from 'path'
+import os from 'os'
 import type { Env, GetEnv, SetEnv } from '../types'
 import { switchEnvGlobalSlug } from '../globals/switchEnvGlobal.js'
+
+const tmpFile = path.posix.join(os.tmpdir(), 'payload-env.txt')
 
 declare global {
   var env: Env | undefined
@@ -7,10 +12,16 @@ declare global {
 
 global.env = undefined
 
+const isDev = process.env.NODE_ENV === 'development'
+
 export const getEnv: GetEnv = async (payload) => {
   if (typeof global.env !== 'undefined') {
     return global.env
-  } else {
+  } else if (isDev && existsSync(tmpFile)) {
+    const env = readFileSync(tmpFile, 'utf-8') as Env
+    setEnvCache(env)
+    return env
+  } else if (payload) {
     const switchEnvGlobal = await payload.findGlobal({
       slug: switchEnvGlobalSlug,
       depth: 0,
@@ -18,17 +29,22 @@ export const getEnv: GetEnv = async (payload) => {
     const env = switchEnvGlobal?.env ?? 'development'
     setEnvCache(env)
     return env
+  } else {
+    return 'development'
   }
 }
 
 export const setEnv: SetEnv = async (newEnv, payload) => {
   setEnvCache(newEnv)
-  await payload.updateGlobal({
-    slug: switchEnvGlobalSlug,
-    data: {
-      env: newEnv,
-    },
-  })
+  writeFileSync(tmpFile, newEnv)
+  if (payload) {
+    await payload.updateGlobal({
+      slug: switchEnvGlobalSlug,
+      data: {
+        env: newEnv,
+      },
+    })
+  }
 }
 
 export const setEnvCache = (newEnv: Env) => {
