@@ -29,6 +29,7 @@ export function switchEnvPlugin<DBA>({
   enable = true,
   quickSwitch = false,
   logDatabaseSize = false,
+  developmentSafetyMode = true,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (config) => {
     const developmentFileStorageMode = developmentFileStorage.mode
@@ -53,6 +54,33 @@ export function switchEnvPlugin<DBA>({
 
     if (!enable) {
       return config
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      const developmentDbArgs = db.developmentArgs as object
+      if (
+        typeof developmentDbArgs === 'object' &&
+        'url' in developmentDbArgs &&
+        typeof developmentDbArgs.url === 'string' &&
+        developmentDbArgs.url
+      ) {
+        if (
+          !(
+            developmentDbArgs.url.includes('localhost') ||
+            developmentDbArgs.url.includes('127.0.0.1')
+          )
+        ) {
+          if (developmentSafetyMode) {
+            throw new Error(
+              'Development database url does not contain "localhost" or "127.0.0.1". To disable this check, set the `developmentSafetyMode` plugin argument to false.',
+            )
+          } else {
+            console.warn(
+              '\x1b[31mWARNING: Your development database url does not contain "localhost" or "127.0.0.1". You may be in danger of overwriting your production database!\x1b[0m',
+            )
+          }
+        }
+      }
     }
 
     const getDatabaseAdapter = getDbaFunction(db)

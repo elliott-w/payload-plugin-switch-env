@@ -70,6 +70,12 @@ export interface SwitchEnvPluginArgs<DBA> {
    */
   developmentFileStorage?: DevelopmentFileStorageArgs
   /**
+   * If true, when `NODE_ENV` is `development` and the development args database url does not
+   * contain 'localhost' or '127.0.0.1' the plugin will throw an error.
+   * @default true
+   */
+  developmentSafetyMode?: boolean
+  /**
    * Enable or disable the plugin
    * @default true
    */
