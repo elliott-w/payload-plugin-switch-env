@@ -86,7 +86,9 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
     : getLatestXVersionsWithFallback(collection, maxPerDocument)
 }
 
-const getTopNCacheKey = (collection: any): { kind: 'object'; key: object } | { kind: 'string'; key: string } => {
+const getTopNCacheKey = (
+  collection: any,
+): { kind: 'object'; key: object } | { kind: 'string'; key: string } => {
   const db = collection?.db
 
   if ((typeof db === 'object' || typeof db === 'function') && db !== null) {
@@ -96,7 +98,8 @@ const getTopNCacheKey = (collection: any): { kind: 'object'; key: object } | { k
     }
   }
 
-  const dbName = collection?.dbName ?? collection?.namespace ?? collection?.collectionName ?? 'unknown-db'
+  const dbName =
+    collection?.dbName ?? collection?.namespace ?? collection?.collectionName ?? 'unknown-db'
   return {
     kind: 'string',
     key: String(dbName),
@@ -230,9 +233,10 @@ const getLatestXVersionsWithFallback = (
 }
 
 /**
- * Restores the database with the data from the provided base64 string.
+ * Restores the database with the data from the provided backup data.
  * @param connection - The Mongoose connection to the MongoDB database.
- * @param base64String - The base64 string containing the serialized backup data.
+ * @param backupData - The backup data containing collections and indexes to restore.
+ * @param logger - The Payload logger instance for logging restore operations.
  */
 export async function restore(
   connection: Connection,
