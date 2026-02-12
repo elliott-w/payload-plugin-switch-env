@@ -56,10 +56,12 @@ export default buildConfig({
         prefix: 'staging',
         collections: s3StorageCollections,
       },
-      copyVersions: {
-        default: {
-          mode: 'latest-x',
-          x: 3,
+      copy: {
+        versions: {
+          default: {
+            mode: 'latest-x',
+            x: 3,
+          },
         },
       },
     }),

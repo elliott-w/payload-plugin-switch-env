@@ -5,9 +5,10 @@ import type { GetDatabaseAdapter } from '../db/getDbaFunction'
 import type { GetEnv } from '../../types'
 import { switchDbConnection } from '../db/switchDbConnection'
 import {
+  resolvePayloadCollectionScopes,
   resolveVersionCollectionModes,
-  type ResolvedCopyVersionsConfig,
-} from '../copyVersions'
+  type ResolvedCopyConfig,
+} from '../copyUtils'
 
 export interface CopyEndpointInput {
   // No parameters needed - always copies from production to development
@@ -22,14 +23,14 @@ export interface CopyEndpointArgs {
   getDatabaseAdapter: GetDatabaseAdapter
   logDatabaseSize: boolean
   getEnv: GetEnv
-  copyVersions: ResolvedCopyVersionsConfig
+  copy: ResolvedCopyConfig
 }
 
 export const copyEndpoint = ({
   getDatabaseAdapter,
   logDatabaseSize,
   getEnv,
-  copyVersions,
+  copy,
 }: CopyEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/copy-db',
@@ -50,11 +51,16 @@ export const copyEndpoint = ({
       await switchDbConnection(payload, 'production', getDatabaseAdapter)
 
       logger.debug(`Creating backup from production environment`)
+      const payloadCollectionScopes = resolvePayloadCollectionScopes({
+        payload,
+        copy,
+      })
       const versionCollectionModes = resolveVersionCollectionModes({
         payload,
-        copyVersions,
+        copy,
       })
       const backupData = await backup(payload.db.connection, {
+        payloadCollectionScopes,
         versionCollectionModes,
       })
 

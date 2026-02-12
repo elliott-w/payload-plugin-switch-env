@@ -11,9 +11,10 @@ import type {
 } from '../../types'
 import { switchDbConnection } from '../db/switchDbConnection'
 import {
+  resolvePayloadCollectionScopes,
   resolveVersionCollectionModes,
-  type ResolvedCopyVersionsConfig,
-} from '../copyVersions'
+  type ResolvedCopyConfig,
+} from '../copyUtils'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -30,7 +31,7 @@ export interface SwitchEndpointArgs {
   getEnv: GetEnv
   setEnv: SetEnv
   developmentFileStorage: DevelopmentFileStorageArgs
-  copyVersions: ResolvedCopyVersionsConfig
+  copy: ResolvedCopyConfig
 }
 
 export const switchEndpoint = ({
@@ -39,7 +40,7 @@ export const switchEndpoint = ({
   getEnv,
   setEnv,
   developmentFileStorage,
-  copyVersions,
+  copy,
 }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch-env',
@@ -53,11 +54,15 @@ export const switchEndpoint = ({
       if (req.json) {
         const body = (await req.json()) as SwitchEndpointInput
         if (body.copyDatabase) {
+          const payloadCollectionScopes = resolvePayloadCollectionScopes({
+            payload,
+            copy,
+          })
           const versionCollectionModes = resolveVersionCollectionModes({
             payload,
-            copyVersions,
+            copy,
           })
-          backupData = await backup(connection, { versionCollectionModes })
+          backupData = await backup(connection, { payloadCollectionScopes, versionCollectionModes })
           const databaseSize = logDatabaseSize
             ? formatFileSize(JSON.stringify(backupData).length)
             : null

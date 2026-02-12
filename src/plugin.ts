@@ -14,10 +14,7 @@ import type { SwitchEnvPluginArgs } from './types.js'
 import { switchEnvGlobal } from './globals/switchEnvGlobal.js'
 import { switchDbConnection } from './lib/db/switchDbConnection.js'
 import { copyEndpoint } from './lib/api-endpoints/copy.js'
-import {
-  normalizeCopyVersionsConfig,
-  warnOnInvalidOverrideTargets,
-} from './lib/copyVersions.js'
+import { normalizeCopyConfig, warnOnInvalidOverrideTargets } from './lib/copyUtils.js'
 
 const basePath = '@elliott-w/payload-plugin-switch-env/client'
 const DangerBarPath = `${basePath}#DangerBar`
@@ -34,10 +31,10 @@ export function switchEnvPlugin<DBA>({
   quickSwitch = false,
   logDatabaseSize = false,
   developmentSafetyMode = true,
-  copyVersions,
+  copy,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (config) => {
-    const copyVersionsWarnings: string[] = []
+    const copyWarnings: string[] = []
     const developmentFileStorageMode = developmentFileStorage.mode
     config.admin = {
       ...(config.admin || {}),
@@ -90,18 +87,18 @@ export function switchEnvPlugin<DBA>({
     }
 
     const getDatabaseAdapter = getDbaFunction(db)
-    const resolvedCopyVersions = normalizeCopyVersionsConfig({
-      copyVersions,
+    const resolvedCopy = normalizeCopyConfig({
+      copy,
       warn: (message) => {
-        copyVersionsWarnings.push(message)
+        copyWarnings.push(message)
       },
     })
     warnOnInvalidOverrideTargets({
-      copyVersions: resolvedCopyVersions,
+      copy: resolvedCopy,
       collections: config.collections || [],
       globals: config.globals || [],
       warn: (message) => {
-        copyVersionsWarnings.push(message)
+        copyWarnings.push(message)
       },
     })
 
@@ -154,13 +151,13 @@ export function switchEnvPlugin<DBA>({
         getEnv,
         setEnv,
         developmentFileStorage,
-        copyVersions: resolvedCopyVersions,
+        copy: resolvedCopy,
       }),
       copyEndpoint({
         getDatabaseAdapter,
         logDatabaseSize,
         getEnv,
-        copyVersions: resolvedCopyVersions,
+        copy: resolvedCopy,
       }),
     ]
 
@@ -178,7 +175,7 @@ export function switchEnvPlugin<DBA>({
 
     const oldInit = config.onInit
     config.onInit = async (payload) => {
-      for (const warning of copyVersionsWarnings) {
+      for (const warning of copyWarnings) {
         payload.logger.warn(`[payload-plugin-switch-env] ${warning}`)
       }
 

@@ -59,32 +59,43 @@ export type DevelopmentFileStorageMode = DevelopmentFileStorageArgs['mode']
 
 export type ButtonMode = 'switch' | 'copy'
 
-export type CopyVersionsModes = { mode: 'all' } | { mode: 'latest-x'; x: number } | { mode: 'none' }
+export type CopyMode = { mode: 'all' } | { mode: 'latest-x'; x: number } | { mode: 'none' }
 
-export type CopyVersionsOverrides<TSlug extends string> = Partial<
-  Record<
-    TSlug,
-    {
-      /** Overrides the default copy versions setting for this entity */
-      versions?: CopyVersionsModes
-    }
-  >
->
+export type CopyModeOverrides<TSlug extends string> = Partial<Record<TSlug, CopyMode>>
 
-export interface CopyVersionsConfig {
+export interface CopyTargetConfig {
   /**
-   * Default versions behavior to apply for version-enabled collections/globals.
+   * Default copy behavior for this target.
    * @default { mode: 'all' }
    */
-  default?: CopyVersionsModes
+  default?: CopyMode
   /**
-   * Per-collection overrides.
+   * Per-collection overrides by collection slug.
    */
-  collections?: CopyVersionsOverrides<CollectionSlug>
+  collections?: CopyModeOverrides<CollectionSlug>
   /**
-   * Per-global overrides.
+   * Per-global overrides by global slug.
    */
-  globals?: CopyVersionsOverrides<GlobalSlug>
+  globals?: CopyModeOverrides<GlobalSlug>
+}
+
+export interface CopyConfig {
+  /**
+   * Configure how base documents are handled when copying the production database to development.
+   * - `{ mode: 'all' }`: Copy all documents
+   * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x documents
+   * - `{ mode: 'none' }`: Do not copy any documents
+   * @default { default: { mode: 'all' } }
+   */
+  documents?: CopyTargetConfig
+  /**
+   * Configure how version documents are handled when copying the production database to development.
+   * - `{ mode: 'all' }`: Copy all versions of all documents
+   * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
+   * - `{ mode: 'none' }`: Do not copy any versions
+   * @default { default: { mode: 'all' } }
+   */
+  versions?: CopyTargetConfig
 }
 
 export interface SwitchEnvPluginArgs<DBA> {
@@ -126,12 +137,5 @@ export interface SwitchEnvPluginArgs<DBA> {
    * @default false
    */
   quickSwitch?: QuickSwitchArgs
-  /**
-   * Configure how document versions are handled when copying the production database to development.
-   * - `default: { mode: 'all' }`: Copy all versions of all documents
-   * - `default: { mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
-   * - `default: { mode: 'none' }`: Do not copy any versions
-   * @default { default: { mode: 'all' } }
-   */
-  copyVersions?: CopyVersionsConfig
+  copy?: CopyConfig
 }
