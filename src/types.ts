@@ -1,5 +1,11 @@
 import type { CollectionOptions } from '@payloadcms/plugin-cloud-storage/types'
-import type { DatabaseAdapterObj, Payload, UploadCollectionSlug } from 'payload'
+import type {
+  CollectionSlug,
+  DatabaseAdapterObj,
+  GlobalSlug,
+  Payload,
+  UploadCollectionSlug,
+} from 'payload'
 
 interface DatabaseAdapterArgs<T> {
   function: (args: T) => DatabaseAdapterObj
@@ -53,6 +59,8 @@ export type DevelopmentFileStorageMode = DevelopmentFileStorageArgs['mode']
 
 export type ButtonMode = 'switch' | 'copy'
 
+export type CopyVersionsModes = { mode: 'all' } | { mode: 'latest-x'; x: number } | { mode: 'none' }
+
 export interface SwitchEnvPluginArgs<DBA> {
   /**
    * Changes what the button does in the admin panel. In `switch` mode you can switch
@@ -92,4 +100,30 @@ export interface SwitchEnvPluginArgs<DBA> {
    * @default false
    */
   quickSwitch?: QuickSwitchArgs
+  /**
+   * Configure how document versions are handled when copying the production database to development.
+   * - `{ mode: 'all' }`: Copy all versions of all documents
+   * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
+   * - `{ mode: 'none' }`: Do not copy any versions
+   * @default { mode: 'all' }
+   */
+  versions?: CopyVersionsModes
+  collections?: Partial<
+    Record<
+      CollectionSlug,
+      {
+        /** Overrides the versions setting for this collection */
+        versions?: CopyVersionsModes
+      }
+    >
+  >
+  globals?: Partial<
+    Record<
+      GlobalSlug,
+      {
+        /** Overrides the versions setting for this global */
+        versions?: CopyVersionsModes
+      }
+    >
+  >
 }

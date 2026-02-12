@@ -30,6 +30,9 @@ export function switchEnvPlugin<DBA>({
   quickSwitch = false,
   logDatabaseSize = false,
   developmentSafetyMode = true,
+  versions = { mode: 'all' },
+  collections,
+  globals,
 }: SwitchEnvPluginArgs<DBA>): Plugin {
   return async (config) => {
     const developmentFileStorageMode = developmentFileStorage.mode
@@ -134,11 +137,17 @@ export function switchEnvPlugin<DBA>({
         getEnv,
         setEnv,
         developmentFileStorage,
+        versions,
+        collections,
+        globals,
       }),
       copyEndpoint({
         getDatabaseAdapter,
         logDatabaseSize,
         getEnv,
+        versions,
+        collections,
+        globals,
       }),
     ]
 

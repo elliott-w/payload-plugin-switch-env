@@ -1,9 +1,16 @@
 import { type Connection } from 'mongoose'
 import { type BasePayload } from 'payload'
+import type { CopyVersionsModes } from '../../types'
 
 export interface BackupData {
   collections: { [collectionName: string]: any[] }
   indexes: { [collectionName: string]: any[] }
+}
+
+export interface BackupOptions {
+  versionCollectionModes?: {
+    [collectionName: string]: CopyVersionsModes
+  }
 }
 
 /**
@@ -11,7 +18,7 @@ export interface BackupData {
  * @param connection - The Mongoose connection to the MongoDB database.
  * @returns A promise that resolves to a JSON string containing the backup data.
  */
-export async function backup(connection: Connection): Promise<BackupData> {
+export async function backup(connection: Connection, options: BackupOptions = {}): Promise<BackupData> {
   const db = connection.db
   if (!db) {
     throw new Error('Could not make backup: database connection not established')
@@ -29,9 +36,17 @@ export async function backup(connection: Connection): Promise<BackupData> {
   for (const collectionInfo of collections) {
     const collectionName = collectionInfo.name
     const collection = db.collection(collectionName)
+    const versionMode = options.versionCollectionModes?.[collectionName]
+
+    if (versionMode?.mode === 'none') {
+      continue
+    }
 
     // Backup documents
-    const documents = await collection.find({}).toArray()
+    const documents =
+      versionMode?.mode === 'latest-x'
+        ? await getLatestXVersionsByParent(collection, versionMode.x)
+        : await collection.find({}).toArray()
     backupData.collections[collectionName] = documents
 
     // Backup indexes
@@ -40,6 +55,61 @@ export async function backup(connection: Connection): Promise<BackupData> {
   }
 
   return backupData
+}
+
+const getLatestXVersionsByParent = async (collection: any, count: number): Promise<any[]> => {
+  const maxPerDocument = Math.max(0, Math.floor(count))
+  if (maxPerDocument < 1) {
+    return []
+  }
+
+  const documents: any[] = []
+  const countsByParent = new Map<string, number>()
+  const cursor = collection.find({}).sort({
+    parent: 1,
+    updatedAt: -1,
+    _id: -1,
+  })
+
+  try {
+    // Read newest records first within each parent and keep only the first N.
+    while (await cursor.hasNext()) {
+      const doc = await cursor.next()
+      if (!doc) {
+        continue
+      }
+
+      const parentKey = getParentKey(doc.parent)
+      const currentCount = countsByParent.get(parentKey) ?? 0
+      if (currentCount >= maxPerDocument) {
+        continue
+      }
+
+      documents.push(doc)
+      countsByParent.set(parentKey, currentCount + 1)
+    }
+  } finally {
+    await cursor.close()
+  }
+
+  return documents
+}
+
+const getParentKey = (parent: unknown): string => {
+  if (typeof parent === 'undefined') {
+    return '__undefined_parent__'
+  }
+  if (parent === null) {
+    return '__null_parent__'
+  }
+  if (typeof parent === 'string' || typeof parent === 'number' || typeof parent === 'boolean') {
+    return String(parent)
+  }
+  if (typeof parent === 'object' && 'toString' in parent && typeof parent.toString === 'function') {
+    return parent.toString()
+  }
+
+  return JSON.stringify(parent)
 }
 
 /**

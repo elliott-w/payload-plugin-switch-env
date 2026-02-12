@@ -10,6 +10,12 @@ import type {
   SetEnv,
 } from '../../types'
 import { switchDbConnection } from '../db/switchDbConnection'
+import {
+  resolveVersionCollectionModes,
+  type CollectionVersionsOverrides,
+  type GlobalVersionsOverrides,
+} from '../copyVersions'
+import type { CopyVersionsModes } from '../../types'
 
 export interface SwitchEndpointInput {
   copyDatabase: boolean
@@ -26,6 +32,9 @@ export interface SwitchEndpointArgs {
   getEnv: GetEnv
   setEnv: SetEnv
   developmentFileStorage: DevelopmentFileStorageArgs
+  versions: CopyVersionsModes
+  collections?: CollectionVersionsOverrides
+  globals?: GlobalVersionsOverrides
 }
 
 export const switchEndpoint = ({
@@ -34,6 +43,9 @@ export const switchEndpoint = ({
   getEnv,
   setEnv,
   developmentFileStorage,
+  versions,
+  collections,
+  globals,
 }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
   path: '/switch-env',
@@ -47,7 +59,13 @@ export const switchEndpoint = ({
       if (req.json) {
         const body = (await req.json()) as SwitchEndpointInput
         if (body.copyDatabase) {
-          backupData = await backup(connection)
+          const versionCollectionModes = resolveVersionCollectionModes({
+            payload,
+            defaultVersions: versions,
+            collectionOverrides: collections,
+            globalOverrides: globals,
+          })
+          backupData = await backup(connection, { versionCollectionModes })
           const databaseSize = logDatabaseSize
             ? formatFileSize(JSON.stringify(backupData).length)
             : null
