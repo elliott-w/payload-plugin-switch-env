@@ -1,7 +1,6 @@
 import { type Connection } from 'mongoose'
 import { type BasePayload } from 'payload'
-import type { CopyMode } from '../../types'
-import type { CollectionCopyScope } from '../copyUtils'
+import type { CollectionCopyScope, VersionCollectionModes } from '../copyUtils'
 
 const topNSupportByDbObjectKey = new WeakMap<object, boolean>()
 const topNSupportByDbStringKey = new Map<string, boolean>()
@@ -15,9 +14,7 @@ export interface BackupOptions {
   payloadCollectionScopes?: {
     [collectionName: string]: CollectionCopyScope[]
   }
-  versionCollectionModes?: {
-    [collectionName: string]: CopyMode
-  }
+  versionCollectionModes?: VersionCollectionModes
 }
 
 /**
@@ -66,17 +63,10 @@ export async function backup(
       backupData.collections[collectionName] = await getDocumentsByScopes(collection, scopes)
     } else {
       const versionMode = versionCollectionModesByName[collectionName]
-
-      // Version collection with explicit `none` mode: skip both docs and indexes.
-      if (versionMode.mode === 'none') {
-        continue
-      }
-
-      // Version collection with `latest-x`: keep only latest N per parent.
       backupData.collections[collectionName] =
-        versionMode.mode === 'latest-x'
-          ? await getLatestXVersionsByParent(collection, versionMode.x)
-          : await collection.find({}).toArray()
+        versionMode.mode === 'all'
+          ? await collection.find({}).toArray()
+          : await getLatestXVersionsByParent(collection, versionMode.x)
     }
 
     // Backup indexes
@@ -129,6 +119,11 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
   const maxPerDocument = Math.max(0, Math.floor(count))
   if (maxPerDocument < 1) {
     return []
+  }
+
+  // Fast path: Payload maintains one latest=true version per parent.
+  if (maxPerDocument === 1) {
+    return collection.find({ latest: true }).toArray()
   }
 
   const supportsTopN = await detectTopNSupport(collection)
@@ -214,6 +209,9 @@ const getLatestXVersionsWithTopN = (collection: any, maxPerDocument: number): Pr
               $topN: {
                 n: maxPerDocument,
                 sortBy: {
+                  // Payload list views query versions with { latest: true } when drafts are enabled.
+                  // Prioritize latest=true so latest-x copies remain visible in admin list views.
+                  latest: -1,
                   updatedAt: -1,
                   _id: -1,
                 },
@@ -248,6 +246,8 @@ const getLatestXVersionsWithFallback = (
         {
           $sort: {
             parent: 1,
+            // Keep the latest=true version at the front for each parent group.
+            latest: -1,
             updatedAt: -1,
             _id: -1,
           },

@@ -59,8 +59,7 @@ export default buildConfig({
       copy: {
         versions: {
           default: {
-            mode: 'latest-x',
-            x: 3,
+            mode: 'none',
           },
         },
       },
@@ -151,4 +150,16 @@ export default buildConfig({
     }
   },
   sharp,
+  logger: {
+    options: {
+      level: 'debug',
+      transport: {
+        target: 'pino-pretty',
+        options: {
+          translateTime: 'HH:MM:ss',
+          ignore: 'pid,hostname',
+        },
+      },
+    },
+  },
 })

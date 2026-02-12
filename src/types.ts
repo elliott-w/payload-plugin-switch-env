@@ -59,24 +59,34 @@ export type DevelopmentFileStorageMode = DevelopmentFileStorageArgs['mode']
 
 export type ButtonMode = 'switch' | 'copy'
 
-export type CopyMode = { mode: 'all' } | { mode: 'latest-x'; x: number } | { mode: 'none' }
+export type CopyMode =
+  | { mode: 'all' }
+  | { mode: 'none' }
+  | {
+      mode: 'latest-x'
+      /** Minimum value: 1 */
+      x: number
+    }
 
-export type CopyModeOverrides<TSlug extends string> = Partial<Record<TSlug, CopyMode>>
+export type CopyDocumentsMode = CopyMode
+export type CopyVersionsMode = CopyMode
 
-export interface CopyTargetConfig {
+export type CopyModeOverrides<TSlug extends string, TMode> = Partial<Record<TSlug, TMode>>
+
+export interface CopyTargetConfig<TMode> {
   /**
    * Default copy behavior for this target.
    * @default { mode: 'all' }
    */
-  default?: CopyMode
+  default?: TMode
   /**
    * Per-collection overrides by collection slug.
    */
-  collections?: CopyModeOverrides<CollectionSlug>
+  collections?: CopyModeOverrides<CollectionSlug, TMode>
   /**
    * Per-global overrides by global slug.
    */
-  globals?: CopyModeOverrides<GlobalSlug>
+  globals?: CopyModeOverrides<GlobalSlug, TMode>
 }
 
 export interface CopyConfig {
@@ -87,15 +97,15 @@ export interface CopyConfig {
    * - `{ mode: 'none' }`: Do not copy any documents
    * @default { default: { mode: 'all' } }
    */
-  documents?: CopyTargetConfig
+  documents?: CopyTargetConfig<CopyDocumentsMode>
   /**
    * Configure how version documents are handled when copying the production database to development.
    * - `{ mode: 'all' }`: Copy all versions of all documents
    * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
-   * - `{ mode: 'none' }`: Do not copy any versions
+   * - `{ mode: 'none' }`: Copy only the latest version of each document (`latest: true`)
    * @default { default: { mode: 'all' } }
    */
-  versions?: CopyTargetConfig
+  versions?: CopyTargetConfig<CopyVersionsMode>
 }
 
 export interface SwitchEnvPluginArgs<DBA> {

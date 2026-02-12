@@ -1,21 +1,29 @@
 import type { CollectionConfig, GlobalConfig, Payload } from 'payload'
-import type { CopyConfig, CopyMode, CopyModeOverrides, CopyTargetConfig } from '../types'
+import type {
+  CopyConfig,
+  CopyDocumentsMode,
+  CopyModeOverrides,
+  CopyTargetConfig,
+  CopyVersionsMode,
+} from '../types'
 
+type CopyMode = CopyDocumentsMode | CopyVersionsMode
+type RuntimeCopyVersionsMode = Exclude<CopyVersionsMode, { mode: 'none' }>
 const DEFAULT_COPY_MODE: CopyMode = { mode: 'all' }
 const INTERNAL_MAX_LATEST_X = 100
 
-type CollectionModeOverrides = CopyModeOverrides<string>
-type GlobalModeOverrides = CopyModeOverrides<string>
+type CollectionModeOverrides<TMode extends CopyMode> = CopyModeOverrides<string, TMode>
+type GlobalModeOverrides<TMode extends CopyMode> = CopyModeOverrides<string, TMode>
 
-export interface ResolvedCopyTargetConfig {
-  default: CopyMode
-  collections?: CollectionModeOverrides
-  globals?: GlobalModeOverrides
+export interface ResolvedCopyTargetConfig<TMode extends CopyMode> {
+  default: TMode
+  collections?: CollectionModeOverrides<TMode>
+  globals?: GlobalModeOverrides<TMode>
 }
 
 export interface ResolvedCopyConfig {
-  documents: ResolvedCopyTargetConfig
-  versions: ResolvedCopyTargetConfig
+  documents: ResolvedCopyTargetConfig<CopyDocumentsMode>
+  versions: ResolvedCopyTargetConfig<RuntimeCopyVersionsMode>
 }
 
 interface NormalizeCopyConfigArgs {
@@ -41,11 +49,11 @@ interface ResolvePayloadCollectionScopesArgs {
 }
 
 export interface VersionCollectionModes {
-  [collectionName: string]: CopyMode
+  [collectionName: string]: RuntimeCopyVersionsMode
 }
 
 export interface CollectionCopyScope {
-  mode: CopyMode
+  mode: CopyDocumentsMode
   filter?: Record<string, unknown>
 }
 
@@ -60,9 +68,15 @@ export const normalizeCopyConfig = ({
   const fromObject = copy || {}
   const maxX = INTERNAL_MAX_LATEST_X
 
+  const normalizedVersions = normalizeTargetConfig(fromObject.versions, 'copy.versions', maxX, warn)
+
   return {
     documents: normalizeTargetConfig(fromObject.documents, 'copy.documents', maxX, warn),
-    versions: normalizeTargetConfig(fromObject.versions, 'copy.versions', maxX, warn),
+    versions: {
+      default: coerceVersionMode(normalizedVersions.default),
+      collections: coerceVersionOverrides(normalizedVersions.collections),
+      globals: coerceVersionOverrides(normalizedVersions.globals),
+    },
   }
 }
 
@@ -75,7 +89,9 @@ export const warnOnInvalidOverrideTargets = ({
   const collectionVersionsBySlug = new Map(
     collections.map((collection) => [collection.slug, Boolean(collection.versions)]),
   )
-  const globalVersionsBySlug = new Map(globals.map((global) => [global.slug, Boolean(global.versions)]))
+  const globalVersionsBySlug = new Map(
+    globals.map((global) => [global.slug, Boolean(global.versions)]),
+  )
 
   warnOnEntityOverrides({
     overrides: copy.documents.collections,
@@ -178,11 +194,11 @@ const addCollectionScope = (
 }
 
 const normalizeTargetConfig = (
-  config: CopyTargetConfig | undefined,
+  config: CopyTargetConfig<CopyMode> | undefined,
   contextPrefix: string,
   maxX: number,
   warn?: (message: string) => void,
-): ResolvedCopyTargetConfig => {
+): ResolvedCopyTargetConfig<CopyMode> => {
   const targetConfig = config || {}
 
   const defaultMode = normalizeMode(targetConfig.default || DEFAULT_COPY_MODE, {
@@ -207,7 +223,7 @@ const normalizeTargetConfig = (
 }
 
 const normalizeOverrides = (
-  overrides: CollectionModeOverrides | GlobalModeOverrides | undefined,
+  overrides: CollectionModeOverrides<CopyMode> | GlobalModeOverrides<CopyMode> | undefined,
   contextPrefix: string,
   maxX: number,
   warn?: (message: string) => void,
@@ -216,7 +232,7 @@ const normalizeOverrides = (
     return undefined
   }
 
-  const normalized: CollectionModeOverrides = {}
+  const normalized: CollectionModeOverrides<CopyMode> = {}
   for (const slug of Object.keys(overrides)) {
     const mode = overrides[slug]
     if (typeof mode === 'undefined') {
@@ -242,7 +258,9 @@ const normalizeMode = (
   },
 ): CopyMode => {
   if (!mode || typeof mode !== 'object' || typeof mode.mode !== 'string') {
-    options.warn?.(`\`${options.context}\` must be a valid copy mode. Falling back to { mode: 'all' }.`)
+    options.warn?.(
+      `\`${options.context}\` must be a valid copy mode. Falling back to { mode: 'all' }.`,
+    )
     return { mode: 'all' }
   }
 
@@ -274,6 +292,33 @@ const normalizeMode = (
   return { mode: 'all' }
 }
 
+const coerceVersionMode = (mode: CopyVersionsMode): RuntimeCopyVersionsMode => {
+  if (mode.mode === 'none') {
+    return { mode: 'latest-x', x: 1 }
+  }
+  return mode
+}
+
+const coerceVersionOverrides = (
+  overrides: CollectionModeOverrides<CopyMode> | GlobalModeOverrides<CopyMode> | undefined,
+): CollectionModeOverrides<RuntimeCopyVersionsMode> | undefined => {
+  if (!overrides) {
+    return undefined
+  }
+
+  const coerced: CollectionModeOverrides<RuntimeCopyVersionsMode> = {}
+  for (const slug of Object.keys(overrides)) {
+    const mode = overrides[slug]
+    if (typeof mode === 'undefined') {
+      continue
+    }
+
+    coerced[slug] = coerceVersionMode(mode)
+  }
+
+  return coerced
+}
+
 const warnOnEntityOverrides = ({
   overrides,
   enabledBySlug,
@@ -282,7 +327,7 @@ const warnOnEntityOverrides = ({
   requireVersionsEnabled,
   warn,
 }: {
-  overrides: CollectionModeOverrides | GlobalModeOverrides | undefined
+  overrides: CollectionModeOverrides<CopyMode> | GlobalModeOverrides<CopyMode> | undefined
   enabledBySlug: Map<string, boolean>
   entityName: 'collection' | 'global'
   pathPrefix: string
@@ -300,7 +345,9 @@ const warnOnEntityOverrides = ({
     }
 
     if (requireVersionsEnabled && !enabledBySlug.get(slug)) {
-      warn?.(`\`${pathPrefix}.${slug}\` is set, but ${entityName} "${slug}" does not have versions enabled.`)
+      warn?.(
+        `\`${pathPrefix}.${slug}\` is set, but ${entityName} "${slug}" does not have versions enabled.`,
+      )
     }
   }
 }
@@ -314,8 +361,9 @@ const getVersionCollectionName = (
     slug: string
   },
 ) => {
-  const versionModel = (payload.db as { versions?: Record<string, { collection?: { name?: string } }> })
-    .versions?.[slug]
+  const versionModel = (
+    payload.db as { versions?: Record<string, { collection?: { name?: string } }> }
+  ).versions?.[slug]
   const modelCollectionName = versionModel?.collection?.name
   if (modelCollectionName) {
     return modelCollectionName
