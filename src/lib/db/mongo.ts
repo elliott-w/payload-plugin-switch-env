@@ -1,22 +1,46 @@
 import { type Connection } from 'mongoose'
 import { type BasePayload } from 'payload'
+import type { CopyMode } from '../../types'
+import type { CollectionCopyScope } from '../copyUtils'
+
+const topNSupportByDbObjectKey = new WeakMap<object, boolean>()
+const topNSupportByDbStringKey = new Map<string, boolean>()
 
 export interface BackupData {
   collections: { [collectionName: string]: any[] }
   indexes: { [collectionName: string]: any[] }
 }
 
+export interface BackupOptions {
+  payloadCollectionScopes?: {
+    [collectionName: string]: CollectionCopyScope[]
+  }
+  versionCollectionModes?: {
+    [collectionName: string]: CopyMode
+  }
+}
+
 /**
- * Creates a JSON string representation of all the collections in the MongoDB database.
+ * Creates a JSON representation of configured Payload collections in the MongoDB database.
  * @param connection - The Mongoose connection to the MongoDB database.
  * @returns A promise that resolves to a JSON string containing the backup data.
  */
-export async function backup(connection: Connection): Promise<BackupData> {
+export async function backup(
+  connection: Connection,
+  options: BackupOptions = {},
+): Promise<BackupData> {
   const db = connection.db
   if (!db) {
     throw new Error('Could not make backup: database connection not established')
   }
   const collections = await db.listCollections().toArray()
+  const existingCollectionNames = new Set(collections.map((collectionInfo) => collectionInfo.name))
+  const payloadCollectionScopesByName = options.payloadCollectionScopes || {}
+  const versionCollectionModesByName = options.versionCollectionModes || {}
+  const targetCollectionNames = new Set([
+    ...Object.keys(payloadCollectionScopesByName),
+    ...Object.keys(versionCollectionModesByName),
+  ])
 
   const backupData: {
     collections: { [collectionName: string]: any[] }
@@ -26,13 +50,34 @@ export async function backup(connection: Connection): Promise<BackupData> {
     indexes: {},
   }
 
-  for (const collectionInfo of collections) {
-    const collectionName = collectionInfo.name
-    const collection = db.collection(collectionName)
+  for (const collectionName of Array.from(targetCollectionNames)) {
+    if (!existingCollectionNames.has(collectionName)) {
+      continue
+    }
 
-    // Backup documents
-    const documents = await collection.find({}).toArray()
-    backupData.collections[collectionName] = documents
+    const collection = db.collection(collectionName)
+    const isBaseCollection = Object.prototype.hasOwnProperty.call(
+      payloadCollectionScopesByName,
+      collectionName,
+    )
+
+    if (isBaseCollection) {
+      const scopes = payloadCollectionScopesByName[collectionName] || []
+      backupData.collections[collectionName] = await getDocumentsByScopes(collection, scopes)
+    } else {
+      const versionMode = versionCollectionModesByName[collectionName]
+
+      // Version collection with explicit `none` mode: skip both docs and indexes.
+      if (versionMode.mode === 'none') {
+        continue
+      }
+
+      // Version collection with `latest-x`: keep only latest N per parent.
+      backupData.collections[collectionName] =
+        versionMode.mode === 'latest-x'
+          ? await getLatestXVersionsByParent(collection, versionMode.x)
+          : await collection.find({}).toArray()
+    }
 
     // Backup indexes
     const indexes = await collection.indexes()
@@ -42,10 +87,207 @@ export async function backup(connection: Connection): Promise<BackupData> {
   return backupData
 }
 
+const getDocumentsByScopes = async (
+  collection: any,
+  scopes: CollectionCopyScope[],
+): Promise<any[]> => {
+  if (scopes.length === 0) {
+    return []
+  }
+
+  const documents: any[] = []
+  for (const scope of scopes) {
+    if (scope.mode.mode === 'none') {
+      continue
+    }
+
+    const filter = scope.filter || {}
+    const scopedDocs =
+      scope.mode.mode === 'latest-x'
+        ? await getLatestXDocuments(collection, scope.mode.x, filter)
+        : await collection.find(filter).toArray()
+    documents.push(...scopedDocs)
+  }
+
+  return documents
+}
+
+const getLatestXDocuments = async (
+  collection: any,
+  count: number,
+  filter: Record<string, unknown>,
+): Promise<any[]> => {
+  const maxDocs = Math.max(0, Math.floor(count))
+  if (maxDocs < 1) {
+    return []
+  }
+
+  return collection.find(filter).sort({ updatedAt: -1 }).limit(maxDocs).toArray()
+}
+
+const getLatestXVersionsByParent = async (collection: any, count: number): Promise<any[]> => {
+  const maxPerDocument = Math.max(0, Math.floor(count))
+  if (maxPerDocument < 1) {
+    return []
+  }
+
+  const supportsTopN = await detectTopNSupport(collection)
+  return supportsTopN
+    ? getLatestXVersionsWithTopN(collection, maxPerDocument)
+    : getLatestXVersionsWithFallback(collection, maxPerDocument)
+}
+
+const getTopNCacheKey = (
+  collection: any,
+): { kind: 'object'; key: object } | { kind: 'string'; key: string } => {
+  const db = collection?.db
+
+  if ((typeof db === 'object' || typeof db === 'function') && db !== null) {
+    return {
+      kind: 'object',
+      key: db,
+    }
+  }
+
+  const dbName =
+    collection?.dbName ?? collection?.namespace ?? collection?.collectionName ?? 'unknown-db'
+  return {
+    kind: 'string',
+    key: String(dbName),
+  }
+}
+
+const detectTopNSupport = async (collection: any): Promise<boolean> => {
+  const cacheKey = getTopNCacheKey(collection)
+  const cached =
+    cacheKey.kind === 'object'
+      ? topNSupportByDbObjectKey.get(cacheKey.key)
+      : topNSupportByDbStringKey.get(cacheKey.key)
+
+  if (typeof cached === 'boolean') {
+    return cached
+  }
+
+  try {
+    await collection
+      .aggregate([
+        { $limit: 1 },
+        {
+          $group: {
+            _id: null,
+            docs: {
+              $topN: {
+                n: 1,
+                sortBy: { _id: -1 },
+                output: '$$ROOT',
+              },
+            },
+          },
+        },
+      ])
+      .toArray()
+    if (cacheKey.kind === 'object') {
+      topNSupportByDbObjectKey.set(cacheKey.key, true)
+    } else {
+      topNSupportByDbStringKey.set(cacheKey.key, true)
+    }
+    return true
+  } catch (_error) {
+    // If probing fails for any reason, fall back to the compatible pipeline.
+    if (cacheKey.kind === 'object') {
+      topNSupportByDbObjectKey.set(cacheKey.key, false)
+    } else {
+      topNSupportByDbStringKey.set(cacheKey.key, false)
+    }
+    return false
+  }
+}
+
+const getLatestXVersionsWithTopN = (collection: any, maxPerDocument: number): Promise<any[]> => {
+  return collection
+    .aggregate(
+      [
+        {
+          $group: {
+            _id: '$parent',
+            docs: {
+              $topN: {
+                n: maxPerDocument,
+                sortBy: {
+                  updatedAt: -1,
+                  _id: -1,
+                },
+                output: '$$ROOT',
+              },
+            },
+          },
+        },
+        {
+          $unwind: '$docs',
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$docs',
+          },
+        },
+      ],
+      {
+        allowDiskUse: true,
+      },
+    )
+    .toArray()
+}
+
+const getLatestXVersionsWithFallback = (
+  collection: any,
+  maxPerDocument: number,
+): Promise<any[]> => {
+  return collection
+    .aggregate(
+      [
+        {
+          $sort: {
+            parent: 1,
+            updatedAt: -1,
+            _id: -1,
+          },
+        },
+        {
+          $group: {
+            _id: '$parent',
+            docs: {
+              $push: '$$ROOT',
+            },
+          },
+        },
+        {
+          $project: {
+            docs: {
+              $slice: ['$docs', maxPerDocument],
+            },
+          },
+        },
+        {
+          $unwind: '$docs',
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$docs',
+          },
+        },
+      ],
+      {
+        allowDiskUse: true,
+      },
+    )
+    .toArray()
+}
+
 /**
- * Restores the database with the data from the provided base64 string.
+ * Restores the database with the data from the provided backup data.
  * @param connection - The Mongoose connection to the MongoDB database.
- * @param base64String - The base64 string containing the serialized backup data.
+ * @param backupData - The backup data containing collections and indexes to restore.
+ * @param logger - The Payload logger instance for logging restore operations.
  */
 export async function restore(
   connection: Connection,

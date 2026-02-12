@@ -87,9 +87,11 @@ export interface Config {
     defaultIDType: string;
   };
   globals: {
+    versionedGlobal: VersionedGlobal;
     switchEnv: SwitchEnv;
   };
   globalsSelect: {
+    versionedGlobal: VersionedGlobalSelect<false> | VersionedGlobalSelect<true>;
     switchEnv: SwitchEnvSelect<false> | SwitchEnvSelect<true>;
   };
   locale: null;
@@ -152,6 +154,7 @@ export interface Page {
   title?: string | null;
   updatedAt: string;
   createdAt: string;
+  _status?: ('draft' | 'published') | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -275,6 +278,7 @@ export interface PagesSelect<T extends boolean = true> {
   title?: T;
   updatedAt?: T;
   createdAt?: T;
+  _status?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -344,6 +348,17 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "versionedGlobal".
+ */
+export interface VersionedGlobal {
+  id: string;
+  test?: string | null;
+  _status?: ('draft' | 'published') | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "switchEnv".
  */
 export interface SwitchEnv {
@@ -351,6 +366,17 @@ export interface SwitchEnv {
   env: 'development' | 'production';
   updatedAt?: string | null;
   createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "versionedGlobal_select".
+ */
+export interface VersionedGlobalSelect<T extends boolean = true> {
+  test?: T;
+  _status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

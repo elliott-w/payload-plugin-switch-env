@@ -1,5 +1,11 @@
 import type { CollectionOptions } from '@payloadcms/plugin-cloud-storage/types'
-import type { DatabaseAdapterObj, Payload, UploadCollectionSlug } from 'payload'
+import type {
+  CollectionSlug,
+  DatabaseAdapterObj,
+  GlobalSlug,
+  Payload,
+  UploadCollectionSlug,
+} from 'payload'
 
 interface DatabaseAdapterArgs<T> {
   function: (args: T) => DatabaseAdapterObj
@@ -53,6 +59,45 @@ export type DevelopmentFileStorageMode = DevelopmentFileStorageArgs['mode']
 
 export type ButtonMode = 'switch' | 'copy'
 
+export type CopyMode = { mode: 'all' } | { mode: 'latest-x'; x: number } | { mode: 'none' }
+
+export type CopyModeOverrides<TSlug extends string> = Partial<Record<TSlug, CopyMode>>
+
+export interface CopyTargetConfig {
+  /**
+   * Default copy behavior for this target.
+   * @default { mode: 'all' }
+   */
+  default?: CopyMode
+  /**
+   * Per-collection overrides by collection slug.
+   */
+  collections?: CopyModeOverrides<CollectionSlug>
+  /**
+   * Per-global overrides by global slug.
+   */
+  globals?: CopyModeOverrides<GlobalSlug>
+}
+
+export interface CopyConfig {
+  /**
+   * Configure how base documents are handled when copying the production database to development.
+   * - `{ mode: 'all' }`: Copy all documents
+   * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x documents
+   * - `{ mode: 'none' }`: Do not copy any documents
+   * @default { default: { mode: 'all' } }
+   */
+  documents?: CopyTargetConfig
+  /**
+   * Configure how version documents are handled when copying the production database to development.
+   * - `{ mode: 'all' }`: Copy all versions of all documents
+   * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
+   * - `{ mode: 'none' }`: Do not copy any versions
+   * @default { default: { mode: 'all' } }
+   */
+  versions?: CopyTargetConfig
+}
+
 export interface SwitchEnvPluginArgs<DBA> {
   /**
    * Changes what the button does in the admin panel. In `switch` mode you can switch
@@ -92,4 +137,5 @@ export interface SwitchEnvPluginArgs<DBA> {
    * @default false
    */
   quickSwitch?: QuickSwitchArgs
+  copy?: CopyConfig
 }

@@ -59,6 +59,11 @@ export default buildConfig({
           url: process.env.DEVELOPMENT_DATABASE_URI || '',
         },
       },
+      copy: {
+        versions: {
+          default: { mode: 'latest-x', x: 3 },
+        },
+      },
     }),
   ],
   collections: [
@@ -89,6 +94,21 @@ export default buildConfig({
 })
 ```
 
+## Plugin Options
+
+- `db` (**required**): Database adapter function + production/development args.
+- `buttonMode` (default: `'switch'`):
+  - `'switch'`: toggle between production and development.
+  - `'copy'`: show a dedicated button to copy production DB to development DB. Useful for staging environments.
+- `enable` (default: `true`): Enable/disable plugin behavior.
+- `quickSwitch` (default: `false`): Skip the switch modal and switch immediately in `'switch'` mode.
+- `logDatabaseSize` (default: `false`): Logs serialized backup size when copying DB.
+- `developmentSafetyMode` (default: `true`): Throws if `developmentArgs.url` is not localhost/127.0.0.1 during development.
+- `developmentFileStorage`:
+  - `{ mode: 'file-system' }` (default)
+  - `{ mode: 'cloud-storage', prefix, collections }`
+- `copy`: Allows you to copy only a subset of documents to your development database. See type hints for more information.
+
 ## Limitations
 
 Does not support database migrations.
@@ -97,7 +117,12 @@ Only works with:
 
 - payload 3.0.2 and higher
 - mongodb
-- any cloud storage adapter (does not support local file storage)
+- production setups using a cloud storage adapter for uploads
+
+Notes:
+
+- Development upload behavior can be either local file system or cloud storage via `developmentFileStorage`.
+- The plugin does not support production environments that rely solely on local file storage uploads.
 
 &nbsp;
 

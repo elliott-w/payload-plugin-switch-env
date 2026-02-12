@@ -50,11 +50,19 @@ export default buildConfig({
           url: process.env.DEVELOPMENT_MONGODB_URI || '',
         },
       },
-      buttonMode: 'copy',
+      buttonMode: 'switch',
       developmentFileStorage: {
         mode: 'cloud-storage',
         prefix: 'staging',
         collections: s3StorageCollections,
+      },
+      copy: {
+        versions: {
+          default: {
+            mode: 'latest-x',
+            x: 3,
+          },
+        },
       },
     }),
   ],
@@ -72,6 +80,9 @@ export default buildConfig({
     },
     {
       slug: 'pages',
+      versions: {
+        drafts: true,
+      },
       admin: {
         useAsTitle: 'title',
       },
@@ -105,6 +116,20 @@ export default buildConfig({
       },
     },
   ],
+  globals: [
+    {
+      slug: 'versionedGlobal',
+      versions: {
+        drafts: true,
+      },
+      fields: [
+        {
+          name: 'test',
+          type: 'text',
+        },
+      ],
+    },
+  ],
   secret: process.env.PAYLOAD_SECRET || 'SOME_SECRET',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
@@ -119,7 +144,7 @@ export default buildConfig({
       await payload.create({
         collection: 'users',
         data: {
-          email: 'dev@payloadcms.com',
+          email: adminEmail ?? 'dev@payloadcms.com',
           password: 'test',
         },
       })
