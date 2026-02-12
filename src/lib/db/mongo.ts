@@ -78,43 +78,27 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
     .aggregate(
       [
         {
-          $addFields: {
-            __windowSortKey: {
-              $concat: [
-                {
-                  $dateToString: {
-                    format: '%Y-%m-%dT%H:%M:%S.%LZ',
-                    date: { $ifNull: ['$updatedAt', new Date(0)] },
-                  },
+          $group: {
+            _id: '$parent',
+            docs: {
+              $topN: {
+                n: maxPerDocument,
+                sortBy: {
+                  updatedAt: -1,
+                  _id: -1,
                 },
-                '#',
-                { $toString: '$_id' },
-              ],
-            },
-          },
-        },
-        {
-          $setWindowFields: {
-            partitionBy: '$parent',
-            sortBy: {
-              __windowSortKey: -1,
-            },
-            output: {
-              __rank: {
-                $documentNumber: {},
+                output: '$$ROOT',
               },
             },
           },
         },
         {
-          $match: {
-            __rank: {
-              $lte: maxPerDocument,
-            },
-          },
+          $unwind: '$docs',
         },
         {
-          $unset: ['__rank', '__windowSortKey'],
+          $replaceRoot: {
+            newRoot: '$docs',
+          },
         },
       ],
       {
