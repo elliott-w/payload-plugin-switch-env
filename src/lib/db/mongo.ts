@@ -2,6 +2,8 @@ import { type Connection } from 'mongoose'
 import { type BasePayload } from 'payload'
 import type { CopyVersionsModes } from '../../types'
 
+const topNSupportByDb = new WeakMap<object, boolean>()
+
 export interface BackupData {
   collections: { [collectionName: string]: any[] }
   indexes: { [collectionName: string]: any[] }
@@ -74,6 +76,66 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
     return []
   }
 
+  const supportsTopN = await detectTopNSupport(collection)
+  return supportsTopN
+    ? getLatestXVersionsWithTopN(collection, maxPerDocument)
+    : getLatestXVersionsWithFallback(collection, maxPerDocument)
+}
+
+const detectTopNSupport = async (collection: any): Promise<boolean> => {
+  const dbKey = collection.db as object
+  const cached = topNSupportByDb.get(dbKey)
+  if (typeof cached === 'boolean') {
+    return cached
+  }
+
+  try {
+    await collection
+      .aggregate([
+        { $limit: 1 },
+        {
+          $group: {
+            _id: null,
+            docs: {
+              $topN: {
+                n: 1,
+                sortBy: { _id: -1 },
+                output: '$$ROOT',
+              },
+            },
+          },
+        },
+      ])
+      .toArray()
+    topNSupportByDb.set(dbKey, true)
+    return true
+  } catch (error) {
+    if (!isTopNUnsupportedError(error)) {
+      throw error
+    }
+
+    topNSupportByDb.set(dbKey, false)
+    return false
+  }
+}
+
+const isTopNUnsupportedError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+  const mentionsTopN = message.includes('$topn') || message.includes('topn')
+  const mentionsUnsupported =
+    message.includes('not supported') ||
+    message.includes('unsupported') ||
+    message.includes('unrecognized') ||
+    message.includes('unknown')
+
+  return mentionsTopN && mentionsUnsupported
+}
+
+const getLatestXVersionsWithTopN = (collection: any, maxPerDocument: number): Promise<any[]> => {
   return collection
     .aggregate(
       [
@@ -89,6 +151,48 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
                 },
                 output: '$$ROOT',
               },
+            },
+          },
+        },
+        {
+          $unwind: '$docs',
+        },
+        {
+          $replaceRoot: {
+            newRoot: '$docs',
+          },
+        },
+      ],
+      {
+        allowDiskUse: true,
+      },
+    )
+    .toArray()
+}
+
+const getLatestXVersionsWithFallback = (collection: any, maxPerDocument: number): Promise<any[]> => {
+  return collection
+    .aggregate(
+      [
+        {
+          $sort: {
+            parent: 1,
+            updatedAt: -1,
+            _id: -1,
+          },
+        },
+        {
+          $group: {
+            _id: '$parent',
+            docs: {
+              $push: '$$ROOT',
+            },
+          },
+        },
+        {
+          $project: {
+            docs: {
+              $slice: ['$docs', maxPerDocument],
             },
           },
         },
