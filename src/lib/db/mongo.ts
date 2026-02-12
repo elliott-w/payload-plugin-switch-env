@@ -74,53 +74,54 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
     return []
   }
 
-  const documents: any[] = []
-  const countsByParent = new Map<string, number>()
-  const cursor = collection.find({}).sort({
-    parent: 1,
-    updatedAt: -1,
-    _id: -1,
-  })
-
-  try {
-    // Read newest records first within each parent and keep only the first N.
-    while (await cursor.hasNext()) {
-      const doc = await cursor.next()
-      if (!doc) {
-        continue
-      }
-
-      const parentKey = getParentKey(doc.parent)
-      const currentCount = countsByParent.get(parentKey) ?? 0
-      if (currentCount >= maxPerDocument) {
-        continue
-      }
-
-      documents.push(doc)
-      countsByParent.set(parentKey, currentCount + 1)
-    }
-  } finally {
-    await cursor.close()
-  }
-
-  return documents
-}
-
-const getParentKey = (parent: unknown): string => {
-  if (typeof parent === 'undefined') {
-    return '__undefined_parent__'
-  }
-  if (parent === null) {
-    return '__null_parent__'
-  }
-  if (typeof parent === 'string' || typeof parent === 'number' || typeof parent === 'boolean') {
-    return String(parent)
-  }
-  if (typeof parent === 'object' && 'toString' in parent && typeof parent.toString === 'function') {
-    return parent.toString()
-  }
-
-  return JSON.stringify(parent)
+  return collection
+    .aggregate(
+      [
+        {
+          $addFields: {
+            __windowSortKey: {
+              $concat: [
+                {
+                  $dateToString: {
+                    format: '%Y-%m-%dT%H:%M:%S.%LZ',
+                    date: { $ifNull: ['$updatedAt', new Date(0)] },
+                  },
+                },
+                '#',
+                { $toString: '$_id' },
+              ],
+            },
+          },
+        },
+        {
+          $setWindowFields: {
+            partitionBy: '$parent',
+            sortBy: {
+              __windowSortKey: -1,
+            },
+            output: {
+              __rank: {
+                $documentNumber: {},
+              },
+            },
+          },
+        },
+        {
+          $match: {
+            __rank: {
+              $lte: maxPerDocument,
+            },
+          },
+        },
+        {
+          $unset: ['__rank', '__windowSortKey'],
+        },
+      ],
+      {
+        allowDiskUse: true,
+      },
+    )
+    .toArray()
 }
 
 /**
