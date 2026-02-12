@@ -78,6 +78,9 @@ export default buildConfig({
     },
     {
       slug: 'pages',
+      versions: {
+        drafts: true,
+      },
       admin: {
         useAsTitle: 'title',
       },

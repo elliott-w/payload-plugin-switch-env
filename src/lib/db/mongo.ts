@@ -2,7 +2,8 @@ import { type Connection } from 'mongoose'
 import { type BasePayload } from 'payload'
 import type { CopyVersionsModes } from '../../types'
 
-const topNSupportByDb = new WeakMap<object, boolean>()
+const topNSupportByDbObjectKey = new WeakMap<object, boolean>()
+const topNSupportByDbStringKey = new Map<string, boolean>()
 
 export interface BackupData {
   collections: { [collectionName: string]: any[] }
@@ -20,7 +21,10 @@ export interface BackupOptions {
  * @param connection - The Mongoose connection to the MongoDB database.
  * @returns A promise that resolves to a JSON string containing the backup data.
  */
-export async function backup(connection: Connection, options: BackupOptions = {}): Promise<BackupData> {
+export async function backup(
+  connection: Connection,
+  options: BackupOptions = {},
+): Promise<BackupData> {
   const db = connection.db
   if (!db) {
     throw new Error('Could not make backup: database connection not established')
@@ -82,9 +86,30 @@ const getLatestXVersionsByParent = async (collection: any, count: number): Promi
     : getLatestXVersionsWithFallback(collection, maxPerDocument)
 }
 
+const getTopNCacheKey = (collection: any): { kind: 'object'; key: object } | { kind: 'string'; key: string } => {
+  const db = collection?.db
+
+  if ((typeof db === 'object' || typeof db === 'function') && db !== null) {
+    return {
+      kind: 'object',
+      key: db,
+    }
+  }
+
+  const dbName = collection?.dbName ?? collection?.namespace ?? collection?.collectionName ?? 'unknown-db'
+  return {
+    kind: 'string',
+    key: String(dbName),
+  }
+}
+
 const detectTopNSupport = async (collection: any): Promise<boolean> => {
-  const dbKey = collection.db as object
-  const cached = topNSupportByDb.get(dbKey)
+  const cacheKey = getTopNCacheKey(collection)
+  const cached =
+    cacheKey.kind === 'object'
+      ? topNSupportByDbObjectKey.get(cacheKey.key)
+      : topNSupportByDbStringKey.get(cacheKey.key)
+
   if (typeof cached === 'boolean') {
     return cached
   }
@@ -107,32 +132,21 @@ const detectTopNSupport = async (collection: any): Promise<boolean> => {
         },
       ])
       .toArray()
-    topNSupportByDb.set(dbKey, true)
-    return true
-  } catch (error) {
-    if (!isTopNUnsupportedError(error)) {
-      throw error
+    if (cacheKey.kind === 'object') {
+      topNSupportByDbObjectKey.set(cacheKey.key, true)
+    } else {
+      topNSupportByDbStringKey.set(cacheKey.key, true)
     }
-
-    topNSupportByDb.set(dbKey, false)
+    return true
+  } catch (_error) {
+    // If probing fails for any reason, fall back to the compatible pipeline.
+    if (cacheKey.kind === 'object') {
+      topNSupportByDbObjectKey.set(cacheKey.key, false)
+    } else {
+      topNSupportByDbStringKey.set(cacheKey.key, false)
+    }
     return false
   }
-}
-
-const isTopNUnsupportedError = (error: unknown): boolean => {
-  if (!(error instanceof Error)) {
-    return false
-  }
-
-  const message = error.message.toLowerCase()
-  const mentionsTopN = message.includes('$topn') || message.includes('topn')
-  const mentionsUnsupported =
-    message.includes('not supported') ||
-    message.includes('unsupported') ||
-    message.includes('unrecognized') ||
-    message.includes('unknown')
-
-  return mentionsTopN && mentionsUnsupported
 }
 
 const getLatestXVersionsWithTopN = (collection: any, maxPerDocument: number): Promise<any[]> => {
@@ -170,7 +184,10 @@ const getLatestXVersionsWithTopN = (collection: any, maxPerDocument: number): Pr
     .toArray()
 }
 
-const getLatestXVersionsWithFallback = (collection: any, maxPerDocument: number): Promise<any[]> => {
+const getLatestXVersionsWithFallback = (
+  collection: any,
+  maxPerDocument: number,
+): Promise<any[]> => {
   return collection
     .aggregate(
       [
