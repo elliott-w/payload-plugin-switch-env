@@ -56,9 +56,11 @@ export default buildConfig({
         prefix: 'staging',
         collections: s3StorageCollections,
       },
-      versions: {
-        mode: 'latest-x',
-        x: 3,
+      copyVersions: {
+        default: {
+          mode: 'latest-x',
+          x: 3,
+        },
       },
     }),
   ],
@@ -111,7 +113,7 @@ export default buildConfig({
   ],
   globals: [
     {
-      slug: 'pages',
+      slug: 'versionedGlobal',
       versions: {
         drafts: true,
       },

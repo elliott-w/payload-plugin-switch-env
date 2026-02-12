@@ -61,6 +61,32 @@ export type ButtonMode = 'switch' | 'copy'
 
 export type CopyVersionsModes = { mode: 'all' } | { mode: 'latest-x'; x: number } | { mode: 'none' }
 
+export type CopyVersionsOverrides<TSlug extends string> = Partial<
+  Record<
+    TSlug,
+    {
+      /** Overrides the default copy versions setting for this entity */
+      versions?: CopyVersionsModes
+    }
+  >
+>
+
+export interface CopyVersionsConfig {
+  /**
+   * Default versions behavior to apply for version-enabled collections/globals.
+   * @default { mode: 'all' }
+   */
+  default?: CopyVersionsModes
+  /**
+   * Per-collection overrides.
+   */
+  collections?: CopyVersionsOverrides<CollectionSlug>
+  /**
+   * Per-global overrides.
+   */
+  globals?: CopyVersionsOverrides<GlobalSlug>
+}
+
 export interface SwitchEnvPluginArgs<DBA> {
   /**
    * Changes what the button does in the admin panel. In `switch` mode you can switch
@@ -102,28 +128,10 @@ export interface SwitchEnvPluginArgs<DBA> {
   quickSwitch?: QuickSwitchArgs
   /**
    * Configure how document versions are handled when copying the production database to development.
-   * - `{ mode: 'all' }`: Copy all versions of all documents
-   * - `{ mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
-   * - `{ mode: 'none' }`: Do not copy any versions
-   * @default { mode: 'all' }
+   * - `default: { mode: 'all' }`: Copy all versions of all documents
+   * - `default: { mode: 'latest-x'; x: number }`: Copy only the latest x versions of each document
+   * - `default: { mode: 'none' }`: Do not copy any versions
+   * @default { default: { mode: 'all' } }
    */
-  versions?: CopyVersionsModes
-  collections?: Partial<
-    Record<
-      CollectionSlug,
-      {
-        /** Overrides the versions setting for this collection */
-        versions?: CopyVersionsModes
-      }
-    >
-  >
-  globals?: Partial<
-    Record<
-      GlobalSlug,
-      {
-        /** Overrides the versions setting for this global */
-        versions?: CopyVersionsModes
-      }
-    >
-  >
+  copyVersions?: CopyVersionsConfig
 }

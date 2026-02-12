@@ -87,11 +87,11 @@ export interface Config {
     defaultIDType: string;
   };
   globals: {
-    pagess: Pagess;
+    versionedGlobal: VersionedGlobal;
     switchEnv: SwitchEnv;
   };
   globalsSelect: {
-    pagess: PagessSelect<false> | PagessSelect<true>;
+    versionedGlobal: VersionedGlobalSelect<false> | VersionedGlobalSelect<true>;
     switchEnv: SwitchEnvSelect<false> | SwitchEnvSelect<true>;
   };
   locale: null;
@@ -346,9 +346,9 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pagess".
+ * via the `definition` "versionedGlobal".
  */
-export interface Pagess {
+export interface VersionedGlobal {
   id: string;
   test?: string | null;
   _status?: ('draft' | 'published') | null;
@@ -367,9 +367,9 @@ export interface SwitchEnv {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "pagess_select".
+ * via the `definition` "versionedGlobal_select".
  */
-export interface PagessSelect<T extends boolean = true> {
+export interface VersionedGlobalSelect<T extends boolean = true> {
   test?: T;
   _status?: T;
   updatedAt?: T;

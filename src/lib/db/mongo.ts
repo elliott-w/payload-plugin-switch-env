@@ -24,6 +24,7 @@ export async function backup(connection: Connection, options: BackupOptions = {}
     throw new Error('Could not make backup: database connection not established')
   }
   const collections = await db.listCollections().toArray()
+  const versionCollectionModesByName = options.versionCollectionModes || {}
 
   const backupData: {
     collections: { [collectionName: string]: any[] }
@@ -36,18 +37,28 @@ export async function backup(connection: Connection, options: BackupOptions = {}
   for (const collectionInfo of collections) {
     const collectionName = collectionInfo.name
     const collection = db.collection(collectionName)
-    const versionMode = options.versionCollectionModes?.[collectionName]
+    const isVersionCollection = Object.prototype.hasOwnProperty.call(
+      versionCollectionModesByName,
+      collectionName,
+    )
 
-    if (versionMode?.mode === 'none') {
-      continue
+    // Base collections (and any non-version collections) are always copied in full.
+    if (!isVersionCollection) {
+      backupData.collections[collectionName] = await collection.find({}).toArray()
+    } else {
+      const versionMode = versionCollectionModesByName[collectionName]
+
+      // Version collection with explicit `none` mode: skip both docs and indexes.
+      if (versionMode.mode === 'none') {
+        continue
+      }
+
+      // Version collection with `latest-x`: keep only latest N per parent.
+      backupData.collections[collectionName] =
+        versionMode.mode === 'latest-x'
+          ? await getLatestXVersionsByParent(collection, versionMode.x)
+          : await collection.find({}).toArray()
     }
-
-    // Backup documents
-    const documents =
-      versionMode?.mode === 'latest-x'
-        ? await getLatestXVersionsByParent(collection, versionMode.x)
-        : await collection.find({}).toArray()
-    backupData.collections[collectionName] = documents
 
     // Backup indexes
     const indexes = await collection.indexes()
