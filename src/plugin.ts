@@ -23,6 +23,7 @@ const SwitchDbConnectionViewPath = `${basePath}#SwitchDbConnectionView`
 
 export function switchEnvPlugin<DBA>({
   buttonMode = 'switch',
+  payloadVersion,
   db,
   developmentFileStorage = {
     mode: 'file-system',
@@ -151,6 +152,7 @@ export function switchEnvPlugin<DBA>({
         getEnv,
         setEnv,
         developmentFileStorage,
+        payloadVersion,
         copy: resolvedCopy,
       }),
       copyEndpoint({
@@ -171,7 +173,7 @@ export function switchEnvPlugin<DBA>({
       modifyThumbnailUrl(config, getEnv)
     }
     const env = await getEnv()
-    switchEnvironments(config, env, developmentFileStorage)
+    switchEnvironments(config, env, developmentFileStorage, payloadVersion)
 
     const oldInit = config.onInit
     config.onInit = async (payload) => {
@@ -186,7 +188,7 @@ export function switchEnvPlugin<DBA>({
       const env = await getEnv(payload)
       if (env === 'production') {
         if (buttonMode === 'switch') {
-          switchEnvironments(config, 'production', developmentFileStorage)
+          switchEnvironments(config, 'production', developmentFileStorage, payloadVersion)
           await switchDbConnection(payload, 'production', getDatabaseAdapter)
         } else {
           // We never want to be in production env when using the 'copy' buttonMode

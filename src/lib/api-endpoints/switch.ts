@@ -31,6 +31,7 @@ export interface SwitchEndpointArgs {
   getEnv: GetEnv
   setEnv: SetEnv
   developmentFileStorage: DevelopmentFileStorageArgs
+  payloadVersion: string
   copy: ResolvedCopyConfig
 }
 
@@ -40,6 +41,7 @@ export const switchEndpoint = ({
   getEnv,
   setEnv,
   developmentFileStorage,
+  payloadVersion,
   copy,
 }: SwitchEndpointArgs): Endpoint => ({
   method: 'post',
@@ -101,7 +103,7 @@ export const switchEndpoint = ({
       await fetch(`${serverUrl}${adminRoute}/switch-db-connection?${queryString}`)
     }
 
-    switchEnvironments(payload.config, newEnv, developmentFileStorage)
+    switchEnvironments(payload.config, newEnv, developmentFileStorage, payloadVersion)
 
     logger.info('Switched to ' + newEnv + ' environment')
 

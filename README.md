@@ -50,6 +50,7 @@ export default buildConfig({
     }),
     // The switchEnvPlugin must come last in the plugins array
     switchEnvPlugin({
+      payloadVersion: '3.70.0',
       enable: process.env.NODE_ENV === 'development',
       db: {
         function: mongooseAdapter,
@@ -97,6 +98,7 @@ export default buildConfig({
 ## Plugin Options
 
 - `db` (**required**): Database adapter function + production/development args.
+- `payloadVersion` (**required**): Installed Payload version string (for hook compatibility), e.g. `'3.70.0'`.
 - `buttonMode` (default: `'switch'`):
   - `'switch'`: toggle between production and development.
   - `'copy'`: show a dedicated button to copy production DB to development DB. Useful for staging environments.

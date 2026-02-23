@@ -5,6 +5,7 @@ import {
   type CollectionSlug,
   type PayloadRequest,
   type BasePayload,
+  type CollectionAfterChangeHook,
   type CollectionBeforeChangeHook,
   type CollectionAfterDeleteHook,
   type Field,
@@ -174,46 +175,101 @@ export const toggleLocalStorage = <T extends CollectionConfig | SanitizedCollect
 }
 
 interface UploadHooks {
-  beforeChangeHook: CollectionBeforeChangeHook
+  changeHook: CollectionBeforeChangeHook | CollectionAfterChangeHook
   afterDeleteHook: CollectionAfterDeleteHook
 }
 
 const hooks: Record<CollectionSlug, UploadHooks> = {}
+type CloudStorageUploadHookPhase = 'beforeChange' | 'afterChange'
+
+const parseVersionPart = (part: string): number => {
+  const match = part.match(/^\d+/)
+  return match ? Number(match[0]) : 0
+}
+
+const isPayloadAtLeast = (payloadVersion: string, minVersion: string): boolean => {
+  const [currentMajor = '0', currentMinor = '0', currentPatch = '0'] = payloadVersion.split('.')
+  const [minMajor = '0', minMinor = '0', minPatch = '0'] = minVersion.split('.')
+  const current = [
+    parseVersionPart(currentMajor),
+    parseVersionPart(currentMinor),
+    parseVersionPart(currentPatch),
+  ]
+  const target = [parseVersionPart(minMajor), parseVersionPart(minMinor), parseVersionPart(minPatch)]
+
+  for (let i = 0; i < target.length; i++) {
+    if (current[i] > target[i]) return true
+    if (current[i] < target[i]) return false
+  }
+
+  return true
+}
+
+const getCloudStorageUploadHookPhase = (payloadVersion: string): CloudStorageUploadHookPhase =>
+  isPayloadAtLeast(payloadVersion, '3.70.0') ? 'afterChange' : 'beforeChange'
+
+const getChangeHooks = <T extends CollectionConfig | SanitizedCollectionConfig>(
+  collection: T,
+  cloudStorageUploadHookPhase: CloudStorageUploadHookPhase,
+): (CollectionBeforeChangeHook | CollectionAfterChangeHook)[] => {
+  if (cloudStorageUploadHookPhase === 'afterChange') {
+    return collection.hooks?.afterChange || []
+  }
+  return collection.hooks?.beforeChange || []
+}
+
+const setChangeHooks = (
+  hooksConfig: NonNullable<CollectionConfig['hooks']>,
+  changeHooks: (CollectionBeforeChangeHook | CollectionAfterChangeHook)[],
+  cloudStorageUploadHookPhase: CloudStorageUploadHookPhase,
+) => {
+  if (cloudStorageUploadHookPhase === 'afterChange') {
+    hooksConfig.afterChange = changeHooks as CollectionAfterChangeHook[]
+  } else {
+    hooksConfig.beforeChange = changeHooks as CollectionBeforeChangeHook[]
+  }
+}
 
 /**
- * Prevents files from being uploaded (beforeChange) or deleted (afterDelete)
- * by removing those hooks in development
+ * Prevents files from being uploaded or deleted by removing those hooks in development.
+ * Payload >=3.70.0 moved the cloud-storage upload hook from beforeChange to afterChange.
  */
 const toggleCollectionHooks = <T extends CollectionConfig | SanitizedCollectionConfig>(
   collection: T,
   enabled: boolean,
+  cloudStorageUploadHookPhase: CloudStorageUploadHookPhase,
 ): T => {
   if (enabled) {
     if (hooks[collection.slug]) {
-      collection.hooks = {
+      const changeHooks = getChangeHooks(collection, cloudStorageUploadHookPhase)
+      const hooksConfig = {
         ...(collection.hooks || {}),
-        beforeChange: [
-          ...(collection.hooks?.beforeChange || []),
-          hooks[collection.slug].beforeChangeHook,
-        ],
         afterDelete: [
           ...(collection.hooks?.afterDelete || []),
           hooks[collection.slug].afterDeleteHook,
         ],
+      } satisfies NonNullable<CollectionConfig['hooks']>
+      setChangeHooks(
+        hooksConfig,
+        [...changeHooks, hooks[collection.slug].changeHook],
+        cloudStorageUploadHookPhase,
+      )
+      collection.hooks = {
+        ...hooksConfig,
       }
       delete hooks[collection.slug]
     }
   } else {
-    const beforeChangeHooks = collection.hooks?.beforeChange || []
+    const changeHooks = getChangeHooks(collection, cloudStorageUploadHookPhase)
     const afterDeleteHooks = collection.hooks?.afterDelete || []
-    const beforeChangeHook = beforeChangeHooks.at(-1)
+    const changeHook = changeHooks.at(-1)
     const afterDeleteHook = afterDeleteHooks.at(-1)
-    if (beforeChangeHook && afterDeleteHook) {
+    if (changeHook && afterDeleteHook) {
       hooks[collection.slug] = {
-        beforeChangeHook,
+        changeHook,
         afterDeleteHook,
       }
-      beforeChangeHooks.pop()
+      changeHooks.pop()
       afterDeleteHooks.pop()
     }
   }
@@ -334,6 +390,7 @@ export const switchEnvironments = (
   config: Config | SanitizedConfig,
   env: Env,
   developmentFileStorage: DevelopmentFileStorageArgs,
+  payloadVersion: string,
 ) => {
   if (developmentFileStorage.mode === 'cloud-storage') {
     Object.values(developmentFileStorage.collections).forEach((collectionOptions) => {
@@ -351,7 +408,7 @@ export const switchEnvironments = (
       }
     })
   }
-  modifyUploadCollections(config.collections || [], env, developmentFileStorage)
+  modifyUploadCollections(config.collections || [], env, developmentFileStorage, payloadVersion)
   toggleUploadProviders(config, env, developmentFileStorage.mode)
 }
 
@@ -359,14 +416,17 @@ export const modifyUploadCollections = (
   collections: (CollectionConfig | SanitizedCollectionConfig)[],
   env: Env,
   developmentFileStorage: DevelopmentFileStorageArgs,
+  payloadVersion: string,
 ) => {
   const production = env === 'production'
+  const cloudStorageUploadHookPhase = getCloudStorageUploadHookPhase(payloadVersion)
   collections
     .filter((c) => c.upload)
     .forEach((collection) => {
       toggleCollectionHooks(
         collection,
         production || developmentFileStorage.mode === 'cloud-storage',
+        cloudStorageUploadHookPhase,
       )
       toggleLocalStorage(collection, !production && developmentFileStorage.mode === 'file-system')
     })

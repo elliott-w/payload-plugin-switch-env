@@ -117,6 +117,11 @@ export interface SwitchEnvPluginArgs<DBA> {
    */
   buttonMode?: ButtonMode
   /**
+   * Installed Payload version, used for compatibility logic across hook timing changes.
+   * Example: `3.70.0`
+   */
+  payloadVersion: string
+  /**
    * The database adapter configuration
    */
   db: DatabaseAdapterArgs<DBA>

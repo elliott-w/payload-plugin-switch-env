@@ -42,6 +42,7 @@ export default buildConfig({
       },
     }),
     switchEnvPlugin({
+      payloadVersion: '3.70.0',
       db: {
         function: mongooseAdapter,
         productionArgs: dbArgs,
