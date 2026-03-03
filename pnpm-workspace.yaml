@@ -1,3 +1,13 @@
 packages:
   - './'
   - './dev'
+
+overrides:
+  '@elliott-w/payload-plugin-switch-env>payload': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/db-mongodb': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/db-postgres': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/next': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/richtext-lexical': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/storage-s3': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/ui': '3.78.0'
+  '@elliott-w/payload-plugin-switch-env>@payloadcms/plugin-cloud-storage': '3.78.0'

@@ -182,6 +182,29 @@ interface UploadHooks {
 const hooks: Record<CollectionSlug, UploadHooks> = {}
 type CloudStorageUploadHookPhase = 'beforeChange' | 'afterChange'
 
+const hasLeadingPathPrefix = (value: string, prefix: string): boolean =>
+  value === prefix || value.startsWith(`${prefix}/`)
+
+const prependPathPrefixIfMissing = (value: string, prefix: string): string => {
+  if (!prefix || hasLeadingPathPrefix(value, prefix)) {
+    return value
+  }
+  return path.posix.join(prefix, value)
+}
+
+const removeLeadingPathPrefix = (value: string, prefix: string): string => {
+  if (!prefix) {
+    return value
+  }
+  if (value === prefix) {
+    return ''
+  }
+  if (value.startsWith(`${prefix}/`)) {
+    return value.slice(prefix.length + 1)
+  }
+  return value
+}
+
 const parseVersionPart = (part: string): number => {
   const match = part.match(/^\d+/)
   return match ? Number(match[0]) : 0
@@ -360,10 +383,16 @@ const getModifiedPrefixBeforeChangeHook = (
   developmentFileStorage: DevelopmentFileStorageArgs,
 ): CollectionBeforeChangeHook => {
   return async (args) => {
-    const { data } = args
+    const { data, req } = args
+    if (req.context?.skipCloudStorage) {
+      return data
+    }
     if (data?.createdDuringDevelopment) {
       if (developmentFileStorage.mode === 'cloud-storage' && developmentFileStorage.prefix) {
-        data.prefix = path.posix.join(developmentFileStorage.prefix, data.prefix || '')
+        data.prefix = prependPathPrefixIfMissing(
+          data.prefix || '',
+          developmentFileStorage.prefix,
+        )
       }
     }
     return data
@@ -397,13 +426,12 @@ export const switchEnvironments = (
       if (typeof collectionOptions === 'object' && typeof collectionOptions.prefix === 'string') {
         const devPrefix = developmentFileStorage.prefix
         if (env === 'development') {
-          if (!collectionOptions.prefix.includes(devPrefix)) {
-            collectionOptions.prefix = path.posix.join(devPrefix, collectionOptions.prefix || '')
-          }
+          collectionOptions.prefix = prependPathPrefixIfMissing(
+            collectionOptions.prefix || '',
+            devPrefix,
+          )
         } else {
-          if (collectionOptions.prefix.startsWith(devPrefix)) {
-            collectionOptions.prefix = collectionOptions.prefix.replace(devPrefix + '/', '')
-          }
+          collectionOptions.prefix = removeLeadingPathPrefix(collectionOptions.prefix, devPrefix)
         }
       }
     })
