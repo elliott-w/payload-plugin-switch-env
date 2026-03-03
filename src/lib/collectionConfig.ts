@@ -299,14 +299,24 @@ const toggleCollectionHooks = <T extends CollectionConfig | SanitizedCollectionC
   return collection
 }
 
+type UploadProviderClientProps = {
+  enabled?: boolean
+  serverHandlerPath?: unknown
+}
+
 type UploadProvider = {
-  clientProps: {
-    collectionSlug: string
-    enabled: boolean
-    prefix?: string
-    serverHandlerPath: string
+  clientProps?: UploadProviderClientProps
+}
+
+const hasUploadProviderClientProps = (provider: unknown): provider is UploadProvider => {
+  if (!provider || typeof provider !== 'object') {
+    return false
   }
-  path: string
+  const clientProps = (provider as UploadProvider).clientProps
+  if (!clientProps || typeof clientProps !== 'object') {
+    return false
+  }
+  return 'serverHandlerPath' in clientProps
 }
 
 /**
@@ -318,20 +328,20 @@ export const toggleUploadProviders = (
   env: Env,
   developmentFileStorageMode: DevelopmentFileStorageMode,
 ) => {
-  config.admin = {
-    ...(config.admin || {}),
-    components: {
-      ...(config.admin?.components || {}),
-      providers: (config.admin?.components?.providers || []).map((p) => {
-        if (typeof p === 'object' && p.clientProps && 'serverHandlerPath' in p.clientProps) {
-          const provider = p as UploadProvider
-          const enabled = env === 'production' || developmentFileStorageMode === 'cloud-storage'
-          provider.clientProps.enabled = enabled
-        }
-        return p
-      }),
-    },
+  const providers = config.admin?.components?.providers
+  if (!Array.isArray(providers) || providers.length === 0) {
+    return
   }
+
+  const enabled = env === 'production' || developmentFileStorageMode === 'cloud-storage'
+  providers.forEach((provider) => {
+    if (hasUploadProviderClientProps(provider)) {
+      provider.clientProps = {
+        ...provider.clientProps,
+        enabled,
+      }
+    }
+  })
 }
 
 export const modifyThumbnailUrl = (config: Config | SanitizedConfig, getEnv: GetEnv) => {
