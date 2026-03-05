@@ -218,7 +218,11 @@ const isPayloadAtLeast = (payloadVersion: string, minVersion: string): boolean =
     parseVersionPart(currentMinor),
     parseVersionPart(currentPatch),
   ]
-  const target = [parseVersionPart(minMajor), parseVersionPart(minMinor), parseVersionPart(minPatch)]
+  const target = [
+    parseVersionPart(minMajor),
+    parseVersionPart(minMinor),
+    parseVersionPart(minPatch),
+  ]
 
   for (let i = 0; i < target.length; i++) {
     if (current[i] > target[i]) return true
@@ -393,16 +397,13 @@ const getModifiedPrefixBeforeChangeHook = (
   developmentFileStorage: DevelopmentFileStorageArgs,
 ): CollectionBeforeChangeHook => {
   return async (args) => {
-    const { data, req } = args
-    if (req.context?.skipCloudStorage) {
-      return data
-    }
-    if (data?.createdDuringDevelopment) {
+    const { data, originalDoc } = args
+    const isDevelopmentDoc =
+      data?.createdDuringDevelopment === true || originalDoc?.createdDuringDevelopment === true
+
+    if (isDevelopmentDoc) {
       if (developmentFileStorage.mode === 'cloud-storage' && developmentFileStorage.prefix) {
-        data.prefix = prependPathPrefixIfMissing(
-          data.prefix || '',
-          developmentFileStorage.prefix,
-        )
+        data.prefix = prependPathPrefixIfMissing(data.prefix || '', developmentFileStorage.prefix)
       }
     }
     return data
