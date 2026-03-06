@@ -170,6 +170,7 @@ export interface Media {
   text?: string | null;
   prefix?: string | null;
   createdDuringDevelopment?: boolean | null;
+  developmentStorageMode?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -310,6 +311,7 @@ export interface MediaSelect<T extends boolean = true> {
   text?: T;
   prefix?: T;
   createdDuringDevelopment?: T;
+  developmentStorageMode?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;

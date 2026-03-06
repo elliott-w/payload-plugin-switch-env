@@ -20,6 +20,7 @@ import {
 } from './thumbnailUrl'
 import type { DevelopmentFileStorageArgs, DevelopmentFileStorageMode, Env, GetEnv } from '../types'
 import { getModifiedHandler } from './handlers'
+import { developmentStorageModeFieldName } from './developmentFileStorage'
 import path from 'path'
 
 export const addAccessSettingsToUploadCollection = (
@@ -123,6 +124,13 @@ export const addDevelopmentSettingsToUploadCollection = <
           hidden: true,
         },
       },
+      {
+        name: developmentStorageModeFieldName,
+        type: 'text',
+        admin: {
+          hidden: true,
+        },
+      },
     ]
     if (developmentFileStorageMode === 'file-system') {
       traverseFields({
@@ -148,6 +156,7 @@ export const addDevelopmentSettingsToUploadCollection = <
             const env = await getEnv(payload)
             if (operation === 'create' && env === 'development' && data) {
               data.createdDuringDevelopment = true
+              data[developmentStorageModeFieldName] = developmentFileStorage.mode
             }
             return data
           },

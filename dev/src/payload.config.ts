@@ -52,11 +52,16 @@ export default buildConfig({
         },
       },
       buttonMode: 'switch',
-      developmentFileStorage: {
-        mode: 'cloud-storage',
-        prefix: 'staging',
-        collections: s3StorageCollections,
-      },
+      developmentFileStorage:
+        process.env.APP_ENV === 'staging'
+          ? {
+              mode: 'cloud-storage',
+              prefix: 'staging',
+              collections: s3StorageCollections,
+            }
+          : {
+              mode: 'file-system',
+            },
       copy: {
         versions: {
           default: {
